@@ -636,12 +636,23 @@ const CAL=[
   {d:'2026-11-21',d2:'2026-11-22',k:'meet',t:'Meeting de Lyon Natation Métropole',l:'Lyon',b:25,n:'Meeting national labellisé FFN.'},
   {d:'2026-12-06',k:'meet',t:'Open des Maîtres',l:'Grenoble',b:25,n:'Meeting national labellisé FFN.'},
   {d:'2026-12-18',d2:'2026-12-20',k:'meet',t:'37e Meeting de l’Océan Indien',l:'Saint-Denis (La Réunion)',b:50,n:'Meeting national labellisé FFN.'},
-  {d:null,k:'nat',t:'Championnats de France hiver N2',l:'Date et lieu à paraître',b:25,n:'Au moins 3 semaines avant les N1. Grille N2.'},
-  {d:'2027-03-11',d2:'2027-03-14',k:'nat',t:'Championnats de France hiver N1 Open',l:'Lieu à définir',b:25,n:'Grille N1 hiver (tous bassins). Date limite de qualification ≈ 3 semaines avant.'},
-  {d:'2027-03-27',d2:'2027-03-28',k:'nat',t:'Championnats de France des relais',l:'Libourne',b:25,n:'4×100 et 4×200 NL, 4×100 4N. Pas de grille : un relais par club et par catégorie.'},
-  {d:null,k:'nat',t:'Championnats de France Interclubs Maîtres',l:'Date et lieu à paraître',b:25,n:'Qualification par les interclubs régionaux (février).'},
-  {d:'2027-06-17',d2:'2027-06-21',k:'nat',t:'Championnats de France été Open N1',l:'Lieu à définir',b:50,n:'Grille N1 été, selon le bassin de la performance.'},
-  {d:'2027-07-03',d2:'2027-07-09',k:'int',t:'Championnats du monde Masters (natation)',l:'Budapest, MVM Dome',b:50,n:'World Aquatics Masters Championships, ouverts aux licenciés de 25 ans et plus.'}];
+  {d:'2027-01-30',d2:'2027-01-31',k:'nat',t:'Championnats de France des relais Maîtres',l:'Lieu à définir',b:25,n:'Relais par club et par catégorie (R1 à R8), sans grille.'},
+  {d:'2027-02-19',d2:'2027-02-21',k:'nat',t:'Championnats de France hiver N2',l:'Lieu à définir',b:25,n:'Grille N2 (points). Vendredi en option. Interdit aux qualifiés N1.'},
+  {d:'2027-03-11',d2:'2027-03-14',k:'nat',t:'Championnats de France hiver N1 Open',l:'Lieu à définir',b:25,n:'Grille N1 hiver, temps tous bassins réalisés depuis le 1er janvier 2024.'},
+  {d:'2027-03-27',d2:'2027-03-28',k:'nat',t:'Championnats de France Interclubs Maîtres',l:'Libourne (33)',b:25,n:'Sur qualification aux interclubs régionaux IDF (février).'},
+  {d:'2027-05-21',d2:'2027-05-23',k:'nat',t:'Championnats de France été N2',l:'Lieu à définir',b:50,n:'Grille N2. Vendredi en option.'},
+  {d:'2027-06-17',d2:'2027-06-20',k:'nat',t:'Championnats de France été Open N1',l:'Lieu à définir',b:50,n:'Grille N1 été, selon le bassin de la performance.'},
+  {d:'2027-06-29',d2:'2027-06-30',k:'int',t:'Championnats du monde Masters : eau libre',l:'Budapest (Hongrie)',b:null,n:'World Aquatics Masters Championships, 25 ans et plus.'},
+  {d:'2027-07-03',d2:'2027-07-09',k:'int',t:'Championnats du monde Masters : natation',l:'Budapest, MVM Dome',b:50,n:'World Aquatics Masters Championships, ouverts aux licenciés de 25 ans et plus.'},
+  {d:null,k:'meet',t:'18e Meeting National de Béthune',l:'Béthune',b:50,n:'Date 2027 pas encore labellisée. En 2026 : 7–8 février.'},
+  {d:null,k:'meet',t:'Meeting National Maîtres Villeurbanne',l:'Villeurbanne',b:50,n:'Date 2027 pas encore labellisée. En 2026 : 25 avril.'},
+  {d:null,k:'meet',t:'Meeting des Maîtres de Caen',l:'Caen',b:25,n:'Date 2027 pas encore labellisée. En 2026 : 2–3 mai.'},
+  {d:null,k:'meet',t:'Meeting National Gilbert Bozon',l:'Tours',b:50,n:'Date 2027 pas encore labellisée. En 2026 : 2–3 mai.'},
+  {d:null,k:'meet',t:'Meeting National Maîtres de Dijon Métropole',l:'Dijon',b:50,n:'Date 2027 pas encore labellisée. En 2026 : 9–10 mai.'},
+  {d:null,k:'meet',t:'Meeting National des Maîtres du Gard',l:'Nîmes',b:50,n:'Date 2027 pas encore labellisée. En 2026 : 16–17 mai.'},
+  {d:null,k:'meet',t:'Meeting des Maîtres de Poissy',l:'Poissy (78)',b:50,n:'Le plus proche du club. Date 2027 pas encore labellisée. En 2026 : 23–24 mai, avec les championnats IDF d’été.'},
+  {d:null,k:'meet',t:'Meeting National du Laval Aquatique Club',l:'Laval',b:50,n:'Date 2027 pas encore labellisée. En 2026 : 6 juin.'},
+  {d:null,k:'meet',t:'Meeting National des Maîtres de Toulouse',l:'Toulouse',b:50,n:'Date 2027 pas encore labellisée. En 2026 : 7 juin.'}];
 /* Repères Île-de-France : calendrier LIF 2025-2026 (le calendrier 2026-2027 n'est pas encore publié) */
 const CAL_IDF_PREV=[
   ['2025-10-04','','Soirée Maîtres','Taverny','Dép. 95'],['2025-10-18','','Meeting Éric Aubert','Puteaux','Dép. 92'],['2025-10-19','','Meeting d’automne','Poissy','Dép. 78'],
@@ -675,7 +686,7 @@ function clubCal(){
     <p class="note" style="margin-top:8px">Source : <a href="https://www.lif-natation.fr/dossiers_sportifs_category/maitres/org-competitions-maitres/" target="_blank" rel="noopener">Ligue IDF, compétitions Maîtres</a>. En surligné : Essonne et Viry-Châtillon.</p></div>`:'';
   $('#clubBody').innerHTML=`<div class="panel"><h2>Calendrier des compétitions Maîtres</h2>${chipsHTML(CAL_KINDS,f,'data-ck')}
     ${f!=='idf'||!CAL_IDF_PREV.length?`<div class="stack" style="gap:10px;margin-top:12px">${up.length?up.map(card).join(''):'<p class="muted">Aucune compétition à venir dans cette catégorie.</p>'}</div>`:''}
-    <p class="note" style="margin-top:10px">Sources : <a href="https://www.ffnatation.fr/sites/default/files/2026-10/MAITRES%20-%20R%C3%A8glement%202026-2027.pdf" target="_blank" rel="noopener">règlement Maîtres FFN 2026-2027</a>, <a href="https://ffn.extranat.fr/webffn/meetings.php?idact=mtr" target="_blank" rel="noopener">meetings labellisés extraNat</a>, <a href="https://www.worldaquatics.com/competitions/5546/world-aquatics-championships-budapest-2027" target="_blank" rel="noopener">World Aquatics</a>. D’autres meetings nationaux seront labellisés en cours de saison.</p></div>${idf}`;
+    <p class="note" style="margin-top:10px">Sources : <a href="https://www.comite-loire-natation.fr/calendrier-des-competitions-nationales-maitres-2026-2027/" target="_blank" rel="noopener">calendrier national Maîtres 2026-2027</a>, <a href="https://ffn.extranat.fr/webffn/meetings.php?idact=mtr" target="_blank" rel="noopener">meetings labellisés extraNat</a>, <a href="https://www.worldaquatics.com/competitions/5546/world-aquatics-championships-budapest-2027" target="_blank" rel="noopener">World Aquatics</a>. D’autres meetings nationaux seront labellisés en cours de saison.</p></div>${idf}`;
   document.querySelectorAll('[data-ck]').forEach(b=>b.onclick=()=>{setPref('cal_k',b.dataset.ck);clubCal()});
 }
 function clubLiens(){
@@ -864,9 +875,9 @@ function getProf(s){
   let o={}; try{o=JSON.parse(ls.get('prof-'+s.id)||'{}')}catch(e){}
   const a=autoSpec(s);
   const nextNat=CAL.find(e=>e.k==='nat'&&e.d&&e.d>=today())||CAL.find(e=>e.d&&e.d>=today());
-  return {stroke:o.stroke||a.stroke, dist:o.dist||a.dist, ev:o.ev||a.ev, comp:o.comp??(nextNat?CAL.indexOf(nextNat):-1), sess:+(o.sess||3), dur:+(o.dur||60), auto:a, custom:!!o.stroke};
+  return {stroke:o.stroke||a.stroke, dist:o.dist||a.dist, ev:o.ev||a.ev, comp:(o.compT!=null?CAL.findIndex(e=>e.t===o.compT):o.comp)??(nextNat?CAL.indexOf(nextNat):-1), sess:+(o.sess||3), dur:+(o.dur||60), auto:a, custom:!!o.stroke};
 }
-function saveProf(s,o){ls.set('prof-'+s.id,JSON.stringify(o))}
+function saveProf(s,o){if(o.comp!=null) o.compT=o.comp>=0&&CAL[o.comp]?CAL[o.comp].t:null; ls.set('prof-'+s.id,JSON.stringify(o))}
 
 /* ---------- allures personnelles ---------- */
 function persoPaces(s,pr){
