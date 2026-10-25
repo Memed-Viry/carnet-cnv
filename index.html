@@ -152,6 +152,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
     <button data-go="moi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="8" r="3.6"/><path d="M5 20c1-3.8 3.8-6 7-6s6 2.2 7 6"/></svg>Ma fiche</button>
     <button data-go="club"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4h10v4a5 5 0 0 1-10 0z"/><path d="M7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4"/><path d="M12 13v4M8 20h8"/></svg>Club</button>
     <button data-go="entr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 17c2-2 4-2 6 0s4 2 6 0 4-2 6 0"/><path d="M3 11c2-2 4-2 6 0s4 2 6 0 4-2 6 0"/><path d="M12 3v3"/></svg>Entraîn.</button>
+    <button data-go="forme"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 8v8M17.5 8v8M3.5 10.5v3M20.5 10.5v3M6.5 12h11"/></svg>Forme</button>
   </div>
 </nav>
 
@@ -425,6 +426,7 @@ function viewFiche(id){
       <div class="panel"><h3>Mes zones d’entraînement</h3>${cs?zonesHTML(cs,css.pool)+`<p class="note" style="margin-top:8px">Test du ${fdate(css.date)}, enregistré sur ce téléphone. <button class="tlink" data-go="zones">Refaire le test</button></p>`:`<div class="empty"><b>Pas encore de test CSS</b><button class="btn" data-go="zones" style="margin-top:8px">Calculer mes zones</button></div>`}</div>
     </div>
     ${persoAnalysisHTML(s)}
+    <div class="panel"><h3>Forme hors de l’eau</h3><p class="small muted" style="margin-top:0">Nutrition selon le poids et la taille, musculation illustrée spécifique à la nage.</p><div class="row"><button class="btn" data-go="nutri-${id}">Nutrition</button><button class="btn ghost" data-go="muscu-${id}">Musculation</button></div></div>
     ${ficheExtrasHTML(s)}
     ${evs.length?`<div class="panel"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Progression</h3><select id="progEv" aria-label="Épreuve">${evs.map(e=>`<option value="${e}"${e===progEv?' selected':''}>${EVL[e]}</option>`).join('')}</select></div><div id="progChart" style="margin-top:8px">${progChart(s,progEv)}</div></div>`:''}
     ${evs.length?`<div><h3 style="margin:4px 2px 8px">Toutes les courses</h3><div class="list">${groups}</div></div>`:''}
@@ -1019,6 +1021,338 @@ function viewProg(id){
   wire();
 }
 
+/* ================= FORME : CORPS, NUTRITION, MUSCULATION ================= */
+const ageOf=s=>new Date().getFullYear()-s.annee;
+function getBody(s){try{return JSON.parse(ls.get('corps-'+s.id)||'null')}catch(e){return null}}
+function saveBody(s,o){ls.set('corps-'+s.id,JSON.stringify(o))}
+function getMu(s){let o={};try{o=JSON.parse(ls.get('mu-'+s.id)||'{}')}catch(e){}
+  return Object.assign({eq:['elast'],lvl:'inter',n:2,dur:30,sens:[]},o)}
+const num=v=>{const x=parseFloat(String(v||'').replace(',','.'));return isFinite(x)?x:null};
+const r10=x=>Math.max(0,Math.round(x/10)*10), r5=x=>Math.max(0,Math.round(x/5)*5);
+
+/* ---------- formulaire « Mon corps » ---------- */
+const GOALS=[['perf','Performance / maintien du poids'],['perte','Perte de poids progressive'],['muscle','Prise de muscle']];
+const DIETS=[['omni','Omnivore'],['pesco','Pesco-végétarien (poisson, pas de viande)'],['vege','Végétarien'],['vegan','Végétalien'],['sansporc','Sans porc']];
+const JOBS=[['1.3','Plutôt assis (bureau)'],['1.45','Debout / marche régulière'],['1.6','Travail physique']];
+const SLOTS=[['matin','Le matin'],['midi','Le midi'],['soir','Le soir']];
+function viewCorps(id){
+  const s=S.sw[id]; if(!s){go('nageurs');return}
+  const b=getBody(s)||{}, pr=getProf(s);
+  $('#view').innerHTML=`<button class="back" data-go="forme-${id}">‹ Forme</button><div class="stack"><div class="panel"><h2>Mon corps</h2>
+  <p class="small muted" style="margin-top:0">Ces mesures restent <b>uniquement sur ce téléphone</b> : personne d’autre ne les voit. Elles servent à calculer vos besoins et vos portions.</p>
+  <div class="form">
+    <label for="c_kg">Poids (kg)<input id="c_kg" inputmode="decimal" value="${b.kg??''}" placeholder="ex. 72"></label>
+    <label for="c_cm">Taille (cm)<input id="c_cm" inputmode="numeric" value="${b.cm??''}" placeholder="ex. 178"></label>
+    <label for="c_tt">Tour de taille (cm, facultatif)<input id="c_tt" inputmode="decimal" value="${b.tt??''}"></label>
+    <label for="c_mg">Masse grasse % (facultatif)<input id="c_mg" inputmode="decimal" value="${b.mg??''}"></label>
+    <label for="c_goal" class="wide">Objectif${selHTML('c_goal',GOALS,b.goal||'perf','Objectif')}</label>
+    <label for="c_diet" class="wide">Alimentation${selHTML('c_diet',DIETS,b.diet||'omni','Alimentation')}</label>
+    <label for="c_job" class="wide">Activité en dehors du sport${selHTML('c_job',JOBS,b.job||'1.3','Activité')}</label>
+    <label for="c_slot">Je nage plutôt${selHTML('c_slot',SLOTS,b.slot||'soir','Horaire')}</label>
+    <label for="c_mu">Séances de muscu / sem.${selHTML('c_mu',[[0,'0'],[1,'1'],[2,'2'],[3,'3']],b.mu??getMu(s).n,'Muscu')}</label>
+    <p class="small muted wide" style="margin:0">Natation : ${pr.sess} séances de ${pr.dur} min par semaine (modifiable dans <button class="tlink" data-go="prof-${id}">Réglages d’entraînement</button>).</p>
+    <div class="wide row"><button class="btn" id="c_ok">Enregistrer et voir ma nutrition</button></div><div id="c_err" class="wide"></div></div></div></div>`;
+  $('#c_ok').onclick=()=>{const kg=num($('#c_kg').value), cm=num($('#c_cm').value);
+    if(!(kg>=35&&kg<=200)||!(cm>=130&&cm<=220)){$('#c_err').innerHTML='<div class="hint"><span>Indiquez un poids (35–200 kg) et une taille (130–220 cm).</span></div>';return}
+    const old=getBody(s)||{}, log=(old.log||[]).filter(x=>x.d!==today()); log.push({d:today(),kg}); log.sort((a,c)=>a.d<c.d?-1:1);
+    saveBody(s,{kg,cm,tt:num($('#c_tt').value),mg:num($('#c_mg').value),goal:$('#c_goal').value,diet:$('#c_diet').value,job:$('#c_job').value,slot:$('#c_slot').value,mu:+$('#c_mu').value,log:log.slice(-60)});
+    go('nutri-'+id)};
+  wire();
+}
+
+/* ---------- calculs nutrition ---------- */
+function nutriCalc(s,b){
+  const pr=getProf(s), age=ageOf(s), kg=b.kg, cm=b.cm, M=s.sexe==='M';
+  const bmr=10*kg+6.25*cm-5*age+(M?5:-161);
+  const imc=kg/((cm/100)**2);
+  const base=bmr*(+b.job||1.3);
+  const swimH=pr.dur/60, swimKcal=(7-1)*kg*swimH;            // natation Maîtres ≈ 7 MET, dépense nette
+  const muKcal=(5-1)*kg*(getMu(s).dur/60);
+  let goal=b.goal||'perf', blocked=false;
+  if(goal==='perte'&&imc<20){goal='perf';blocked=true}
+  const adj=goal==='perte'?0.85:goal==='muscle'?1.08:1;
+  const floor=bmr*1.15;
+  const day=(extra,hard)=>{const kcal=Math.max(floor,(base+extra)*adj);
+    const P=(goal==='perf'?1.6:1.8)*kg;
+    const C=(hard==='comp'?6:hard==='rest'?3:pr.dur>=90?6:pr.dur>=75?5:4.5)*kg*(goal==='perte'&&hard!=='comp'?0.85:1);
+    let F=(kcal-P*4-C*4)/9; const Fmin=Math.max(0.8*kg,kcal*0.2/9); if(F<Fmin)F=Fmin;
+    return {kcal:Math.round(P*4+C*4+F*9),P:Math.round(P),C:Math.round(C),F:Math.round(F)}};
+  return {bmr:Math.round(bmr),imc,goal,blocked,age,
+    train:day(swimKcal,'train'), rest:day(b.mu?muKcal*0.5:0,'rest'), comp:day(swimKcal*0.6,'comp'),
+    water:Math.round(kg*35/50)*50, waterSes:Math.round((pr.dur/60)*600/50)*50, pr};
+}
+/* aliments : kcal, protéines, glucides, lipides pour 100 g */
+const FOOD={
+  avoine:['flocons d’avoine',370,13,60,7], pain:['pain complet',250,9,45,3], pates:['pâtes (poids cuit)',150,5.5,30,0.9], riz:['riz (poids cuit)',130,2.7,28,0.3],
+  pdt:['pommes de terre',85,2,19,0.1], banane:['banane',90,1.1,21,0.3], fruit:['fruit de saison',52,0.4,12,0.2], miel:['miel ou confiture',300,0,75,0],
+  lait:['lait demi-écrémé',46,3.3,4.8,1.6], soja:['boisson soja',40,3.3,2.5,1.8], skyr:['skyr nature',60,10.5,4,0.2], ysoja:['yaourt soja',50,4,2,2.5],
+  fblanc:['fromage blanc 3 %',75,7.5,4,3], oeuf:['œufs',140,12.5,0.7,9.5], poulet:['poulet ou dinde (cuit)',165,31,0,3.6], poisson:['poisson blanc (cuit)',105,23,0,1],
+  saumon:['saumon (cuit)',200,22,0,12], lentilles:['lentilles ou pois chiches (cuits)',115,9,17,0.4], tofu:['tofu ferme',120,12,2,7],
+  legumes:['légumes',30,1.5,5,0.3], huile:['huile d’olive ou de colza',900,0,0,100], amandes:['amandes ou noix',600,21,7,52]};
+function protSrc(diet,meal){
+  const m={omni:{dej:'poulet',din:'poisson',pd:'skyr',col:'fblanc'},sansporc:{dej:'poulet',din:'poisson',pd:'skyr',col:'fblanc'},
+    pesco:{dej:'poisson',din:'saumon',pd:'skyr',col:'fblanc'},vege:{dej:'oeuf',din:'tofu',pd:'skyr',col:'fblanc'},vegan:{dej:'tofu',din:'lentilles',pd:'ysoja',col:'ysoja'}};
+  return (m[diet]||m.omni)[meal]}
+function planMeals(t,diet){
+  const milk=diet==='vegan'?'soja':'lait';
+  const M=[
+    {k:'pd',lab:'Petit-déjeuner',pc:.22,cc:.25,fix:[[milk,250],['banane',120]],carb:'avoine',fat:'amandes'},
+    {k:'dej',lab:'Déjeuner',pc:.30,cc:.28,fix:[['legumes',200],['fruit',150]],carb:'pates',fat:'huile'},
+    {k:'col',lab:'Collation (avant ou après la séance)',pc:.15,cc:.17,fix:t.C/t.P>2.6?[['miel',20]]:[],carb:'pain',fat:null},
+    {k:'din',lab:'Dîner',pc:.33,cc:.30,fix:[['legumes',250]],carb:'riz',fat:'huile'}];
+  const out=[], tot=[0,0,0,0];
+  for(const m of M){
+    const items=m.fix.map(([f,g])=>[f,g]); const sum=i=>items.reduce((t,[f,g])=>t+FOOD[f][i]*g/100,0);
+    const cNeed=t.C*m.cc-sum(3); items.push([m.carb,r10(Math.max(m.carb==='avoine'?30:40,cNeed/(FOOD[m.carb][3]/100)))]);
+    const ps=protSrc(diet,m.k); const pNeed=t.P*m.pc-sum(2); let pg=r10(Math.max(m.k==='col'?80:60,pNeed/(FOOD[ps][2]/100)));
+    if(ps==='oeuf') pg=Math.max(120,Math.round(pg/60)*60); items.push([ps,pg]);
+    if(m.fat){const fNeed=t.F*(m.k==='pd'?.2:.3)-sum(4); if(fNeed>2) items.push([m.fat,r5(fNeed/(FOOD[m.fat][4]/100))])}
+    const kc=sum(1),P=sum(2),C=sum(3),F=sum(4); tot[0]+=kc;tot[1]+=P;tot[2]+=C;tot[3]+=F;
+    out.push({lab:m.lab,items:items.filter(([,g])=>g>0),kc,P,C,F});
+  }
+  // ajuster les féculents si les glucides dépassent la cible
+  const CARBS=['avoine','pates','riz','pain'], tc=()=>out.reduce((t,m)=>t+m.items.reduce((u,[f,g])=>u+FOOD[f][3]*g/100,0),0);
+  for(let it=0;it<4&&tc()>t.C*1.04;it++){const ex=tc()-t.C; const cs=out.flatMap(m=>m.items.filter(x=>CARBS.includes(x[0])&&x[1]>20)); const cap=cs.reduce((u,x)=>u+FOOD[x[0]][3]*(x[1]-20)/100,0); if(cap<=0) break;
+    const k=Math.min(1,ex/cap); cs.forEach(x=>{x[1]=Math.max(20,r10(x[1]-(x[1]-20)*k))})}
+  for(const m of out){const sm=i=>m.items.reduce((u,[f,g])=>u+FOOD[f][i]*g/100,0); m.kc=sm(1);m.P=sm(2);m.C=sm(3);m.F=sm(4)}
+  tot[0]=out.reduce((u,m)=>u+m.kc,0);tot[1]=out.reduce((u,m)=>u+m.P,0);tot[2]=out.reduce((u,m)=>u+m.C,0);tot[3]=out.reduce((u,m)=>u+m.F,0);
+  // compléter les lipides restants en huile au dîner
+  const fGap=t.F-tot[3]; if(fGap>4){const d=out[3],it=d.items.find(x=>x[0]==='huile'); const add=r5(fGap); if(it) it[1]+=add; else d.items.push(['huile',add]); tot[0]+=add*9; tot[3]+=add; d.kc+=add*9; d.F+=add}
+  return {meals:out,tot};
+}
+const gTxt=(f,g)=>f==='oeuf'?`${Math.round(g/60)} œuf${g>=120?'s':''}`:f==='huile'?`${g} g (${Math.max(1,Math.round(g/5))} c. à café)`:f==='lait'||f==='soja'?`${g} ml`:`${g} g`;
+
+function viewNutri(id){
+  const s=S.sw[id]; if(!s){go('nageurs');return}
+  const b=getBody(s); if(!b){go('corps-'+id);return}
+  const n=nutriCalc(s,b), dt=pref('nutri_day','train'), T=n[dt], plan=planMeals(T,b.diet);
+  const imcLab=n.imc<18.5?'insuffisance pondérale':n.imc<25?'corpulence normale':n.imc<30?'surpoids':'obésité';
+  const ttRisk=b.tt?(s.sexe==='M'?b.tt>=94:b.tt>=80):false;
+  const log=(b.log||[]), first=log[0], last=log[log.length-1];
+  const sl=b.slot||'soir';
+  const timing={matin:['Au réveil, 30–45 min avant : une banane ou 2 tranches de pain + miel, et un verre d’eau.','Après la séance : le petit-déjeuner complet ci-dessous (protéines + glucides) dans l’heure.'],
+    midi:['Vers 10 h : la collation (pain + fromage blanc ou yaourt).','Après la séance : le déjeuner dans l’heure qui suit.'],
+    soir:['Vers 16–17 h : la collation (pain + fromage blanc ou yaourt), 1 h 30 à 2 h avant.','Après la séance : le dîner dans l’heure, avec la portion de féculents complète.']}[sl];
+  $('#view').innerHTML=`<button class="back" data-go="forme-${id}">‹ Forme</button><div class="stack">
+  <div class="panel"><div class="muted small" style="text-transform:uppercase;letter-spacing:.07em;font-weight:600">Nutrition personnalisée</div>
+    <h2 style="margin:2px 0 6px">${esc(s.prenom)} · ${b.kg} kg · ${b.cm} cm</h2>
+    <div class="kpis"><div class="kpi"><div class="v">${n.imc.toFixed(1)}</div><div class="l">IMC · ${imcLab}</div></div><div class="kpi"><div class="v">${n.bmr}</div><div class="l">Métabolisme de base (kcal)</div></div>
+      <div class="kpi"><div class="v">${n.train.kcal}</div><div class="l">kcal jour d’entraînement</div></div><div class="kpi"><div class="v">${n.rest.kcal}</div><div class="l">kcal jour de repos</div></div></div>
+    ${n.blocked?`<div class="hint" style="margin-top:12px"><span>Votre IMC est déjà bas : l’objectif « perte de poids » n’est pas appliqué. Le plan vise le maintien et la performance. Pour un avis personnalisé, voyez un médecin ou un diététicien du sport.</span></div>`:''}
+    ${ttRisk?`<p class="note" style="margin-top:10px">Tour de taille de ${b.tt} cm : au-dessus du repère santé (${s.sexe==='M'?'94':'80'} cm). Une perte progressive et un suivi médical sont conseillés.</p>`:''}
+    ${n.goal==='perte'?`<p class="note" style="margin-top:10px">Déficit limité à environ 15 % pour garder l’énergie à l’entraînement : perte visée de 0,3 à 0,5 kg par semaine. Jamais en dessous de ${Math.round(n.bmr*1.15)} kcal.</p>`:''}
+    ${n.goal==='muscle'?`<p class="note" style="margin-top:10px">Léger surplus (+8 %) et 1,8 g de protéines par kg, à associer aux séances de musculation : prise visée de 1 à 2 kg par mois au maximum.</p>`:''}
+    <div class="row" style="margin-top:12px"><button class="btn ghost" data-go="corps-${id}">Modifier mes mesures</button></div></div>
+
+  <div class="panel"><h3>Mes besoins du jour</h3>${chipsHTML([['train','Jour d’entraînement'],['rest','Jour de repos'],['comp','Jour de compétition']],dt,'data-nd')}
+    <div class="kpis" style="margin-top:12px"><div class="kpi"><div class="v">${T.kcal}</div><div class="l">kcal</div></div><div class="kpi"><div class="v">${T.P} g</div><div class="l">Protéines (${(T.P/b.kg).toFixed(1)} g/kg)</div></div>
+      <div class="kpi"><div class="v">${T.C} g</div><div class="l">Glucides (${(T.C/b.kg).toFixed(1)} g/kg)</div></div><div class="kpi"><div class="v">${T.F} g</div><div class="l">Lipides</div></div>
+      <div class="kpi"><div class="v">${((n.water+(dt==='rest'?0:n.waterSes))/1000).toFixed(1)} L</div><div class="l">Eau${dt==='rest'?'':` dont ${n.waterSes} ml pendant la séance`}</div></div></div></div>
+
+  <div class="panel"><h3>Ma journée type (${dt==='train'?'entraînement':dt==='rest'?'repos':'compétition'})</h3>
+    <div class="stack" style="gap:10px">${plan.meals.map(m=>`<div style="background:var(--sunk);border-radius:8px;padding:10px 12px"><div class="row" style="justify-content:space-between"><b>${m.lab}</b><span class="small muted t">${Math.round(m.kc)} kcal · P ${Math.round(m.P)} · G ${Math.round(m.C)} · L ${Math.round(m.F)}</span></div>
+      <ul style="margin:6px 0 0;padding-left:18px">${m.items.map(([f,g])=>`<li><b class="t">${gTxt(f,g)}</b> ${FOOD[f][0]}</li>`).join('')}</ul></div>`).join('')}</div>
+    <p class="note" style="margin-top:10px">Total : ${Math.round(plan.tot[0])} kcal · ${Math.round(plan.tot[1])} g de protéines · ${Math.round(plan.tot[2])} g de glucides · ${Math.round(plan.tot[3])} g de lipides. Les aliments sont interchangeables à poids égal dans la même famille (pâtes ↔ riz ↔ semoule ; poulet ↔ poisson ↔ œufs).</p></div>
+
+  <div class="panel"><h3>Autour de la séance (${SLOTS.find(x=>x[0]===sl)[1].toLowerCase()})</h3><ul class="obs">
+    <li>${timing[0]}</li><li>Pendant : de l’eau. Au-delà de 1 h 15 d’effort intense, une boisson avec 30 à 40 g de sucres par heure.</li><li>${timing[1]} Visez au moins ${Math.round(b.kg*0.3)} g de protéines et ${Math.round(b.kg*1)} g de glucides.</li></ul></div>
+
+  <div class="panel"><h3>Les jours de compétition</h3><ul class="obs">
+    <li><b>La veille</b> : féculents à chaque repas (environ ${Math.round(b.kg*6)} g de glucides sur la journée), peu de fibres et de graisses au dîner, rien de nouveau.</li>
+    <li><b>3 h avant la course</b> : repas léger et connu (pain ou riz, jambon de volaille ou œuf, compote).</li>
+    <li><b>Entre deux courses</b> : banane, compote, pain d’épices ou barre de céréales, et quelques gorgées d’eau à chaque fois.</li>
+    <li><b>Après la dernière course</b> : un repas complet avec protéines et féculents dans les 2 h.</li></ul></div>
+
+  ${log.length>1?`<div class="panel"><h3>Suivi du poids</h3>${weightChart(log)}<p class="note" style="margin-top:6px">${first.kg} kg le ${fdate(first.d)} → ${last.kg} kg le ${fdate(last.d)} (${last.kg-first.kg>=0?'+':''}${(last.kg-first.kg).toFixed(1)} kg). Pesez-vous au réveil, au même moment de la semaine.</p></div>`:''}
+  <p class="note">Conseils généraux pour sportifs adultes en bonne santé, calculés à partir de vos mesures (formule de Mifflin-St Jeor, recommandations de nutrition du sport). Ils ne remplacent pas l’avis d’un médecin ou d’un diététicien, en particulier en cas de pathologie, d’allergie, de grossesse ou de perte de poids rapide.</p></div>`;
+  document.querySelectorAll('[data-nd]').forEach(x=>x.onclick=()=>{setPref('nutri_day',x.dataset.nd);const y=window.scrollY;viewNutri(id);window.scrollTo(0,y)});
+  wire();
+}
+function weightChart(log){
+  const W=320,H=120,p=26, xs=log.map(x=>+new Date(x.d)), ys=log.map(x=>x.kg);
+  const x0=Math.min(...xs),x1=Math.max(...xs)||x0+1, y0=Math.min(...ys)-1, y1=Math.max(...ys)+1;
+  const X=t=>p+(W-p-8)*(x1===x0?0.5:(t-x0)/(x1-x0)), Y=v=>8+(H-p)*(1-(v-y0)/(y1-y0));
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Évolution du poids"><line x1="${p}" x2="${W-8}" y1="${H-18}" y2="${H-18}" stroke="var(--line)"/>
+  <text x="2" y="${Y(y1)+4}">${y1.toFixed(0)}</text><text x="2" y="${Y(y0)}">${y0.toFixed(0)}</text>
+  <polyline fill="none" stroke="var(--accent)" stroke-width="2" points="${log.map(x=>X(+new Date(x.d)).toFixed(1)+','+Y(x.kg).toFixed(1)).join(' ')}"/>
+  ${log.map(x=>`<circle cx="${X(+new Date(x.d)).toFixed(1)}" cy="${Y(x.kg).toFixed(1)}" r="3" fill="var(--accent)"/>`).join('')}</svg>`;
+}
+
+/* ---------- musculation : bibliothèque illustrée ---------- */
+/* Chaque pose : h = centre de la tête, L = segments du corps (traits), P = matériel. Repère 120 × 90, sol à y = 86. */
+const STAND=[[60,19,60,46],[60,46,61,65,60,85,66,85],[60,46,59,65,58,85,64,85]];
+const EXO={
+ rot_ext:{n:'Rotation externe à l’élastique',cat:'prev',eq:'elast',sens:[],cue:['Coude collé au corps, plié à 90°','Tourner l’avant-bras vers l’extérieur sans bouger le coude'],why:'Renforce la coiffe des rotateurs : prévention n°1 de l’épaule du nageur.',
+  a:{h:[60,12],L:[[60,19,60,46],[57,46,56,85],[63,46,64,85],[54,21,52,33,52,44],[66,21,67,33,58,36]],P:[['band',58,36,28,34]]},
+  b:{h:[60,12],L:[[60,19,60,46],[57,46,56,85],[63,46,64,85],[54,21,52,33,52,44],[66,21,67,33,79,31]],P:[['band',79,31,28,34]]}},
+ ytw:{n:'Y-T-W allongé sur le ventre',cat:'prev',eq:'pdc',sens:[],cue:['Pouces vers le ciel, front au sol','Lever les bras en Y, puis en T, puis en W, sans cambrer'],why:'Muscles des omoplates : épaules stables et bras plus efficaces.',
+  a:{h:[93,75],L:[[85,78,54,80],[54,80,35,81,17,82],[84,78,97,80,109,81]],P:[['floor']]},
+  b:{h:[93,74],L:[[85,78,54,80],[54,80,35,81,17,82],[84,77,96,71,108,66]],P:[['floor']]}},
+ face_pull:{n:'Tirage visage à l’élastique',cat:'prev',eq:'elast',sens:[],cue:['Élastique attaché à hauteur des yeux','Tirer vers le front, coudes hauts, serrer les omoplates'],why:'Équilibre les épaules enroulées par le crawl et le papillon.',
+  a:{h:[60,12],L:[...STAND,[60,21,72,22,85,22]],P:[['band',85,22,108,20],['floor']]},
+  b:{h:[60,12],L:[...STAND,[60,21,49,20,61,15]],P:[['band',61,15,108,20],['floor']]}},
+ traction:{n:'Tractions (aidées par un élastique si besoin)',cat:'tir',eq:'barre',sens:['epaule'],cue:['Mains un peu plus larges que les épaules','Monter le menton au-dessus de la barre, descendre bras tendus'],why:'Dorsaux et biceps : la puissance de la traction sous l’eau.',
+  a:{h:[60,19],L:[[60,25,60,50],[57,50,56,67,58,83],[63,50,64,67,62,83],[48,8,50,17,54,25],[72,8,70,17,66,25],[54,25,66,25]],P:[['bar',38,8,82,8]]},
+  b:{h:[60,4],L:[[60,12,60,37],[57,37,56,54,58,70],[63,37,64,54,62,70],[48,8,44,17,54,12],[72,8,76,17,66,12],[54,12,66,12]],P:[['bar',38,8,82,8]]}},
+ rowing:{n:'Rowing haltère buste penché',cat:'tir',eq:'halt',sens:[],cue:['Dos plat, genoux légèrement fléchis','Tirer l’haltère vers la hanche, coude près du corps'],why:'Dos et arrière d’épaule : la fin de traction et la posture.',
+  a:{h:[79,27],L:[[50,50,72,32],[50,50,57,67,53,85,59,85],[50,50,52,67,47,85,53,85],[72,33,73,46,74,59]],P:[['db',74,61],['floor']]},
+  b:{h:[79,27],L:[[50,50,72,32],[50,50,57,67,53,85,59,85],[50,50,52,67,47,85,53,85],[72,33,61,37,67,47]],P:[['db',67,49],['floor']]}},
+ pullover:{n:'Pull-over haltère sur banc',cat:'tir',eq:'banc',sens:['epaule'],cue:['Bras presque tendus, gainage du ventre','Descendre derrière la tête sans douleur, remonter au-dessus de la poitrine'],why:'Reproduit la prise d’appui du papillon et du crawl.',
+  a:{h:[89,54],L:[[83,57,54,57],[54,57,41,56,39,85],[83,57,96,60,108,64]],P:[['bench',30,58,92],['db',109,66],['floor']]},
+  b:{h:[89,54],L:[[83,57,54,57],[54,57,41,56,39,85],[83,57,83,45,83,33]],P:[['bench',30,58,92],['db',83,30],['floor']]}},
+ lat_band:{n:'Tirage bras tendus à l’élastique',cat:'tir',eq:'elast',sens:[],cue:['Élastique attaché en hauteur, buste un peu penché','Bras tendus, ramener les mains vers les cuisses comme une traction de crawl'],why:'Le geste de traction du crawl, à sec.',
+  a:{h:[64,13],L:[[62,20,58,46],[58,46,59,65,58,85,64,85],[58,46,56,65,54,85,60,85],[62,21,74,13,86,6]],P:[['band',86,6,108,2],['floor']]},
+  b:{h:[64,13],L:[[62,20,58,46],[58,46,59,65,58,85,64,85],[58,46,56,65,54,85,60,85],[62,21,66,33,66,45]],P:[['band',66,45,108,2],['floor']]}},
+ pompes:{n:'Pompes (sur les genoux pour débuter)',cat:'pous',eq:'pdc',sens:['epaule'],cue:['Corps aligné de la tête aux pieds','Descendre la poitrine près du sol, coudes à 45°'],why:'Pectoraux et triceps : la poussée en fin de mouvement.',
+  a:{h:[91,59],L:[[84,63,54,70],[54,70,39,77,24,84],[84,63,84,74,84,85]],P:[['floor']]},
+  b:{h:[91,74],L:[[84,77,54,80],[54,80,39,83,24,85],[84,77,74,77,84,85]],P:[['floor']]}},
+ triceps:{n:'Extension triceps à l’élastique',cat:'pous',eq:'elast',sens:[],cue:['Buste penché, coude fixe contre le corps','Tendre le bras vers l’arrière, comme la fin de poussée'],why:'Fin de poussée du crawl et du papillon.',
+  a:{h:[79,27],L:[[50,50,72,32],[50,50,57,67,53,85,59,85],[50,50,52,67,47,85,53,85],[72,33,61,38,63,50]],P:[['band',63,50,64,85],['floor']]},
+  b:{h:[79,27],L:[[50,50,72,32],[50,50,57,67,53,85,59,85],[50,50,52,67,47,85,53,85],[72,33,61,38,47,40]],P:[['band',47,40,64,85],['floor']]}},
+ planche:{n:'Gainage ventral (planche)',cat:'tronc',eq:'pdc',sens:[],cue:['Coudes sous les épaules, bassin dans l’axe','Variante : avancer un bras devant, comme l’allonge'],why:'Gainage : rester aligné et limiter les ondulations parasites.',
+  a:{h:[87,69],L:[[80,72,52,75],[52,75,37,80,22,84],[80,72,80,85,92,85]],P:[['floor']]},
+  b:{h:[87,69],L:[[80,72,52,75],[52,75,37,80,22,84],[80,72,80,85,92,85],[80,72,94,70,107,69]],P:[['floor']]}},
+ lateral:{n:'Gainage latéral',cat:'tronc',eq:'pdc',sens:[],cue:['Coude sous l’épaule, corps en ligne','Monter le bassin, variante bras tendu vers le ciel'],why:'Obliques : la rotation du corps en crawl et en dos.',
+  a:{h:[24,64],L:[[30,71,62,78],[62,78,96,84],[30,71,30,85,40,85],[32,72,42,76,52,79]],P:[['floor']]},
+  b:{h:[24,62],L:[[30,69,62,72],[62,72,96,84],[30,69,30,85,40,85],[30,69,30,57,30,45]],P:[['floor']]}},
+ deadbug:{n:'Dead bug (gainage sur le dos)',cat:'tronc',eq:'pdc',sens:[],cue:['Bas du dos plaqué au sol en permanence','Allonger un bras et la jambe opposée, lentement'],why:'Gainage profond sans charger le dos.',
+  a:{h:[33,79],L:[[40,81,70,81],[42,81,42,69,42,57],[70,81,70,67,82,67],[66,81,66,69,78,69]],P:[['floor']]},
+  b:{h:[33,79],L:[[40,81,70,81],[42,81,30,79,18,78],[70,81,86,77,102,75],[66,81,66,69,78,69]],P:[['floor']]}},
+ superman:{n:'Superman (extension du dos)',cat:'tronc',eq:'pdc',sens:['dos'],cue:['Regard vers le sol','Décoller bras et jambes de quelques centimètres, tenir 2 s'],why:'Lombaires et fessiers : l’ondulation du papillon et la position haute.',
+  a:{h:[93,75],L:[[85,78,54,80],[54,80,36,81,18,82],[84,78,98,80,110,81]],P:[['floor']]},
+  b:{h:[93,71],L:[[85,76,54,79],[54,78,37,74,20,70],[84,76,97,71,109,67]],P:[['floor']]}},
+ russian:{n:'Rotations du buste assis (russian twist)',cat:'tronc',eq:'pdc',sens:['dos'],cue:['Assis, buste incliné en arrière, dos droit','Tourner les épaules d’un côté puis de l’autre'],why:'Rotation du tronc : la coordination bras-jambes en crawl et en dos.',
+  a:{h:[60,49],L:[[60,80,60,56],[60,80,52,68,46,82],[60,80,68,68,74,82],[60,58,50,64,42,70]],P:[['ball',39,70],['floor']]},
+  b:{h:[60,49],L:[[60,80,60,56],[60,80,52,68,46,82],[60,80,68,68,74,82],[60,58,70,64,78,70]],P:[['ball',81,70],['floor']]}},
+ slam:{n:'Lancer de médecine-ball au sol',cat:'tronc',eq:'ball',sens:['dos'],cue:['Ballon au-dessus de la tête, sur la pointe des pieds','Lancer fort vers le sol en fléchissant les hanches'],why:'Puissance de la chaîne abdominale : papillon et coulées.',
+  a:{h:[66,15],L:[[60,21,60,46],[60,46,61,65,60,85,66,85],[60,46,59,65,58,85,64,85],[60,22,58,12,57,5]],P:[['ball',57,2],['floor']]},
+  b:{h:[76,35],L:[[52,56,70,40],[52,56,66,69,58,85,64,85],[52,56,62,70,54,85,60,85],[70,41,74,58,76,75]],P:[['ball',77,80],['floor']]}},
+ squat_jump:{n:'Squat sauté bras en flèche',cat:'jamb',eq:'pdc',imp:1,sens:['genou'],cue:['Descendre cuisses presque parallèles, bras en arrière','Sauter en tendant tout le corps, bras en flèche au-dessus de la tête'],why:'Explosivité des départs et des poussées au mur.',
+  a:{h:[63,33],L:[[50,62,60,40],[50,62,66,67,60,85,66,85],[50,62,63,69,56,85,62,85],[60,42,54,52,47,58]],P:[['floor']]},
+  b:{h:[66,16],L:[[60,22,60,47],[60,47,60,62,62,77],[60,47,58,62,59,77],[60,22,58,12,57,2]],P:[['floor']]}},
+ squat_lent:{n:'Squat dynamique sans saut',cat:'jamb',eq:'pdc',sens:[],cue:['Descendre en 2 s, pieds largeur de hanches','Remonter vite sur la pointe des pieds, bras en flèche'],why:'Force des jambes pour les départs, sans impact.',
+  a:{h:[63,33],L:[[50,62,60,40],[50,62,66,67,60,85,66,85],[50,62,63,69,56,85,62,85],[60,42,70,44,80,44]],P:[['floor']]},
+  b:{h:[66,11],L:[[60,17,60,43],[60,43,60,63,60,80,64,85],[60,43,58,63,58,80,62,85],[60,18,58,8,57,0]],P:[['floor']]}},
+ fente:{n:'Fentes avant',cat:'jamb',eq:'pdc',sens:['genou'],cue:['Grand pas en avant, buste droit','Genou arrière vers le sol, genou avant au-dessus de la cheville'],why:'Force et équilibre des jambes, utile pour la poussée au virage.',
+  a:{h:[62,12],L:[[62,19,62,46],[62,46,63,65,62,85,68,85],[62,46,61,65,60,85,66,85],[62,21,67,33,64,44]],P:[['floor']]},
+  b:{h:[62,29],L:[[62,36,62,60],[62,60,78,66,80,85,86,85],[62,60,47,74,36,84],[62,38,67,49,64,59]],P:[['floor']]}},
+ sumo:{n:'Squat sumo (jambes écartées)',cat:'jamb',eq:'pdc',sens:['genou'],cue:['Pieds écartés, pointes vers l’extérieur','Descendre en poussant les genoux vers l’extérieur'],why:'Adducteurs et hanches : la puissance du ciseau de brasse.',
+  a:{h:[60,13],L:[[60,20,60,46],[57,46,49,65,40,85],[63,46,71,65,80,85],[56,22,57,34,60,46],[64,22,63,34,60,46]],P:[['db',60,49],['floor']]},
+  b:{h:[60,30],L:[[60,37,60,62],[57,62,44,68,40,85],[63,62,76,68,80,85],[56,39,57,51,60,62],[64,39,63,51,60,62]],P:[['db',60,65],['floor']]}},
+ hip_thrust:{n:'Pont fessier',cat:'jamb',eq:'pdc',sens:[],cue:['Allongé, pieds à plat, genoux pliés','Monter le bassin en serrant les fessiers, tenir 2 s'],why:'Fessiers et ischios : coups de jambes et poussée des virages, sans charger les genoux.',
+  a:{h:[24,80],L:[[31,82,60,83],[60,83,74,66,80,85],[31,82,44,85,56,85]],P:[['floor']]},
+  b:{h:[24,80],L:[[31,82,58,67],[58,67,74,64,80,85],[31,82,44,85,56,85]],P:[['floor']]}},
+ flutter:{n:'Battements de jambes sur le dos',cat:'tronc',eq:'pdc',sens:['dos'],cue:['Bas du dos au sol, jambes tendues','Petits battements rapides depuis la hanche'],why:'Gainage et endurance des coups de jambes.',
+  a:{h:[26,78],L:[[32,81,62,81],[62,81,80,73,98,66],[62,81,80,78,98,75],[32,81,44,85,56,85]],P:[['floor']]},
+  b:{h:[26,78],L:[[32,81,62,81],[62,81,80,78,98,75],[62,81,80,73,98,66],[32,81,44,85,56,85]],P:[['floor']]}},
+ thoracique:{n:'Ouverture thoracique à 4 pattes',cat:'mob',eq:'pdc',sens:[],cue:['Mains sous les épaules, genoux sous les hanches','Ouvrir un bras vers le ciel en suivant la main du regard'],why:'Mobilité du haut du dos : meilleure rotation et allonge.',
+  a:{h:[86,63],L:[[78,66,48,66],[78,66,78,75,78,85],[48,66,48,85,34,85],[78,66,72,60,82,58]],P:[['floor']]},
+  b:{h:[86,62],L:[[78,66,48,66],[78,66,78,75,78,85],[48,66,48,85,34,85],[78,66,78,54,78,42]],P:[['floor']]}}};
+const CAT_LAB={prev:'Prévention épaule',tir:'Tirage',pous:'Poussée',tronc:'Gainage et tronc',jamb:'Jambes et explosivité',mob:'Mobilité'};
+const EQ_LAB=[['elast','Élastiques'],['halt','Haltères'],['ball','Médecine-ball'],['barre','Barre de traction'],['banc','Banc / salle de sport']];
+function poseSVG(p,dx,muted){
+  const c=muted?'var(--muted)':'var(--ink)';
+  const props=(p.P||[]).map(q=>{const [k,...v]=q;
+    if(k==='floor') return `<line x1="${dx+4}" x2="${dx+116}" y1="87" y2="87" stroke="var(--line)" stroke-width="2"/>`;
+    if(k==='band') return `<line x1="${dx+v[0]}" y1="${v[1]}" x2="${dx+v[2]}" y2="${v[3]}" stroke="var(--rope)" stroke-width="2" stroke-dasharray="4 3"/><circle cx="${dx+v[2]}" cy="${v[3]}" r="2.5" fill="var(--rope)"/>`;
+    if(k==='bar') return `<line x1="${dx+v[0]}" y1="${v[1]}" x2="${dx+v[2]}" y2="${v[3]}" stroke="var(--muted)" stroke-width="3" stroke-linecap="round"/>`;
+    if(k==='db') return `<g fill="var(--accent)"><rect x="${dx+v[0]-6}" y="${v[1]-3}" width="12" height="6" rx="2"/></g>`;
+    if(k==='ball') return `<circle cx="${dx+v[0]}" cy="${v[1]}" r="5" fill="var(--accent)"/>`;
+    if(k==='bench') return `<rect x="${dx+v[0]}" y="${v[1]}" width="${v[2]-v[0]}" height="5" rx="2" fill="var(--line)"/><line x1="${dx+v[0]+6}" x2="${dx+v[0]+6}" y1="${v[1]+5}" y2="87" stroke="var(--line)" stroke-width="3"/><line x1="${dx+v[2]-6}" x2="${dx+v[2]-6}" y1="${v[1]+5}" y2="87" stroke="var(--line)" stroke-width="3"/>`;
+    return ''}).join('');
+  const segs=p.L.map((l,i)=>{const pts=[];for(let j=0;j<l.length;j+=2)pts.push((dx+l[j])+','+l[j+1]);return `<polyline points="${pts.join(' ')}" fill="none" stroke="${c}" stroke-width="${i===0?4.5:3.5}" stroke-linecap="round" stroke-linejoin="round"/>`}).join('');
+  return props+segs+`<circle cx="${dx+p.h[0]}" cy="${p.h[1]}" r="5.5" fill="${c}"/>`;
+}
+function exoSVG(k){const e=EXO[k];return `<svg viewBox="0 0 250 92" width="100%" style="max-width:420px;display:block" role="img" aria-label="${esc(e.n)} : position de départ puis position finale">
+  ${poseSVG(e.a,0,true)}<text x="6" y="12">1</text>${poseSVG(e.b,130,false)}<text x="136" y="12">2</text>
+  <path d="M117 46 l10 0 m-4 -4 l4 4 l-4 4" stroke="var(--accent)" stroke-width="2" fill="none" stroke-linecap="round"/></svg>`}
+
+/* ---------- programme de musculation ---------- */
+const STROKE_EXO={NL:['lat_band','rowing','russian','flutter','triceps'],D:['face_pull','russian','lateral','flutter','thoracique'],
+  B:['sumo','squat_jump','hip_thrust','fente','planche'],P:['pullover','slam','superman','squat_jump','lat_band'],'4N':['lat_band','sumo','russian','superman','squat_jump']};
+function exoOk(k,mu,old){const e=EXO[k]; if(e.eq!=='pdc'&&!mu.eq.includes(e.eq)) return false; if(e.sens.some(z=>mu.sens.includes(z))) return false; if(e.imp&&(old||mu.lvl==='deb')) return false; return true}
+const SUBST={traction:'lat_band',rowing:'lat_band',pullover:'lat_band',lat_band:'traction',triceps:'pompes',slam:'russian',russian:'deadbug',superman:'deadbug',flutter:'deadbug',
+  squat_jump:'squat_lent',fente:'hip_thrust',sumo:'hip_thrust',rot_ext:'ytw',face_pull:'ytw',pompes:'planche'};
+function pickExo(k,mu,old,used){let x=k,guard=0;while(x&&(!exoOk(x,mu,old)||used.has(x))&&guard<6){x=SUBST[x];guard++}
+  if(x&&exoOk(x,mu,old)&&!used.has(x)) return x; return null}
+function buildMuscu(s){
+  const pr=getProf(s), mu=getMu(s), ph=phaseOf(pr), old=ageOf(s)>=60, st=pr.stroke;
+  const nEx=mu.dur<=20?5:mu.dur<=30?6:8;
+  const tpl=[['prev',['rot_ext','face_pull','ytw']],['tir',['traction','lat_band','rowing','pullover']],['tronc',['planche','deadbug','lateral']],['jamb',['squat_jump','hip_thrust','fente','sumo','squat_lent']],['pous',['pompes','triceps']],['tronc',['russian','superman','flutter','slam']],['prev',['ytw','face_pull']],['mob',['thoracique']]];
+  const sessions=[];
+  for(let si=0;si<mu.n;si++){
+    const used=new Set(), list=[];
+    const sp=STROKE_EXO[st]||STROKE_EXO.NL;
+    const spec=[sp[si%sp.length],sp[(si+2)%sp.length]];
+    for(const k of spec){const x=pickExo(k,mu,old,used); if(x){used.add(x);list.push(x)}}
+    for(const [cat,opts] of tpl){ if(list.length>=nEx) break; if(list.some(k=>EXO[k].cat===cat)&&cat!=='tronc'&&cat!=='prev') continue;
+      const rot=opts.slice(si%opts.length).concat(opts.slice(0,si%opts.length));
+      for(const k of rot){const x=pickExo(k,mu,old,used); if(x){used.add(x);list.push(x);break}} }
+    const order={mob:0,prev:1,jamb:2,tir:3,pous:4,tronc:5};
+    list.sort((a,b)=>order[EXO[a].cat]-order[EXO[b].cat]);
+    sessions.push(list.slice(0,nEx));
+  }
+  const dose=k=>{const e=EXO[k], expl=['squat_jump','slam','squat_lent'].includes(k), iso=['planche','lateral'].includes(k), deb=mu.lvl==='deb', conf=mu.lvl==='conf';
+    let sets=ph.key==='affut'?2:ph.key==='spec'?(expl?4:3):3; if(deb) sets=Math.max(2,sets-1); if(conf&&ph.key!=='affut') sets++;
+    if(e.cat==='prev'||e.cat==='mob') return {s:2,r:e.cat==='mob'?'8 par côté':'12–15 lents',rec:'30 s'};
+    if(iso) return {s:sets,r:ph.key==='spec'?'20–30 s':deb?'20–30 s':'30–45 s',rec:'30 s'};
+    if(ph.key==='spec') return expl?{s:sets,r:'5 explosifs',rec:'90 s'}:{s:sets,r:'6–8, montée rapide',rec:'90 s'};
+    if(ph.key==='affut') return expl?{s:2,r:'3 explosifs',rec:'2 min'}:{s:2,r:'6',rec:'90 s'};
+    return {s:sets,r:pr.dist==='fond'?'15':'10–12',rec:'45–60 s'}};
+  return {sessions,ph,mu,old,dose};
+}
+function viewMuscu(id){
+  const s=S.sw[id]; if(!s){go('nageurs');return}
+  const pr=getProf(s), M=buildMuscu(s), mu=M.mu, ph=M.ph;
+  const phTxt=ph.key==='foncier'?'Force et endurance de force : mouvements contrôlés, 2 s à la descente.':ph.key==='spec'?'Puissance : mouvements explosifs, peu de répétitions, récupération complète.':'Entretien : volume divisé par deux, dernière séance au plus tard 5 jours avant la compétition.';
+  $('#view').innerHTML=`<button class="back" data-go="forme-${id}">‹ Forme</button><div class="stack">
+  <div class="panel"><div class="muted small" style="text-transform:uppercase;letter-spacing:.07em;font-weight:600">Musculation spécifique natation</div>
+    <h2 style="margin:2px 0 6px">${esc(s.prenom)} · ${STROKE_NAME[pr.stroke]}</h2>
+    <div class="kpis"><div class="kpi"><div class="v">${mu.n}</div><div class="l">Séances / sem.</div></div><div class="kpi"><div class="v">${mu.dur} min</div><div class="l">Par séance</div></div><div class="kpi"><div class="v">${M.sessions[0]?M.sessions[0].length:0}</div><div class="l">Exercices</div></div></div>
+    <div class="hint" style="margin-top:12px"><span><b>${ph.lab}</b>${ph.comp?` vers « ${esc(ph.comp.t)} »`:''}. ${phTxt}${M.old?' Sans sauts (60 ans et plus) : versions sans impact.':''}</span></div>
+    <details style="margin-top:12px"${ls.get('mu-'+id)?'':' open'}><summary style="cursor:pointer;font-weight:600;color:var(--accent)">Personnaliser (matériel, niveau, zones sensibles)</summary>
+      <div class="form" style="margin-top:10px">
+        <div class="wide"><div class="small muted" style="font-weight:600;margin-bottom:4px">Matériel disponible (poids du corps toujours inclus)</div><div class="row">${EQ_LAB.map(([k,l])=>`<label class="chip-f" style="display:inline-flex;gap:6px;align-items:center"><input type="checkbox" data-eq="${k}"${mu.eq.includes(k)?' checked':''} style="padding:0;width:auto"> ${l}</label>`).join('')}</div></div>
+        <label for="m_l">Niveau${selHTML('m_l',[['deb','Débutant'],['inter','Intermédiaire'],['conf','Confirmé']],mu.lvl,'Niveau')}</label>
+        <label for="m_n">Séances / semaine${selHTML('m_n',[[1,'1'],[2,'2'],[3,'3']],mu.n,'Séances')}</label>
+        <label for="m_d">Durée${selHTML('m_d',[[20,'20 min'],[30,'30 min'],[45,'45 min']],mu.dur,'Durée')}</label>
+        <div class="wide"><div class="small muted" style="font-weight:600;margin-bottom:4px">Zones sensibles à ménager</div><div class="row">${[['epaule','Épaules'],['genou','Genoux'],['dos','Bas du dos']].map(([k,l])=>`<label class="chip-f" style="display:inline-flex;gap:6px;align-items:center"><input type="checkbox" data-se="${k}"${mu.sens.includes(k)?' checked':''} style="padding:0;width:auto"> ${l}</label>`).join('')}</div></div>
+        <div class="wide row"><button class="btn" id="m_ok">Mettre à jour mon programme</button></div></div></details></div>
+  <div class="panel"><h3>Échauffement (5 min)</h3><ul class="obs"><li>Moulinets de bras avant et arrière, 20 de chaque.</li><li>Rotations externes à l’élastique très léger, 15.</li><li>10 squats lents et 10 fentes alternées sans charge.</li></ul></div>
+  ${M.sessions.map((L,i)=>`<div class="panel"><h3>Séance ${String.fromCharCode(65+i)}${M.sessions.length>1?` · ${['lundi ou mardi','jeudi','samedi'][i]||''}`:''}</h3><div class="stack" style="gap:12px">
+    ${L.map((k,j)=>{const e=EXO[k],d=M.dose(k);return `<div style="background:var(--sunk);border-radius:10px;padding:10px 12px">
+      <span class="muted small">${j+1}. ${CAT_LAB[e.cat]}</span><div style="font-weight:600">${e.n}</div><div class="small" style="margin-top:2px"><b class="t">${d.s} × ${d.r}</b> <span class="muted">· récupération ${d.rec}</span></div>
+      ${exoSVG(k)}
+      <ol class="small" style="margin:4px 0 0;padding-left:18px">${e.cue.map(c=>`<li>${c}</li>`).join('')}</ol>
+      <p class="small muted" style="margin:6px 0 0">${e.why}</p></div>`}).join('')}</div></div>`).join('')}
+  <p class="note">Faites ces séances hors des jours de séance d’eau intense, ou après la natation. Arrêtez un exercice en cas de douleur, en particulier à l’épaule. En cas de blessure ou de problème de santé, demandez l’avis d’un médecin ou d’un kiné.</p></div>`;
+  $('#m_ok').onclick=()=>{const eq=[...document.querySelectorAll('[data-eq]')].filter(x=>x.checked).map(x=>x.dataset.eq), sens=[...document.querySelectorAll('[data-se]')].filter(x=>x.checked).map(x=>x.dataset.se);
+    ls.set('mu-'+id,JSON.stringify({eq,sens,lvl:$('#m_l').value,n:+$('#m_n').value,dur:+$('#m_d').value})); viewMuscu(id); window.scrollTo(0,0)};
+  wire();
+}
+
+/* ---------- onglet Forme ---------- */
+function viewForme(id){
+  id=id||me(); const s=id?S.sw[id]:null;
+  if(!s){$('#view').innerHTML=`<div class="stack"><div class="panel"><h2>Forme hors de l’eau</h2><p>Nutrition et musculation personnalisées selon votre corps, votre nage et vos compétitions.</p>
+    <div class="hint"><span>Ouvrez votre fiche dans <b>Nageurs</b> et touchez « C’est moi » : cet onglet s’ouvrira directement sur votre programme.</span></div>
+    <div class="row" style="margin-top:12px"><button class="btn" data-go="nageurs">Trouver mon nom</button></div></div></div>`; wire(); return}
+  const b=getBody(s), pr=getProf(s), mu=getMu(s), n=b?nutriCalc(s,b):null;
+  $('#view').innerHTML=`${id!==me()?`<button class="back" data-go="s${id}">‹ ${esc(swName(s))}</button>`:''}<div class="stack">
+  <div class="panel"><div class="muted small" style="text-transform:uppercase;letter-spacing:.07em;font-weight:600">Forme hors de l’eau</div><h2 style="margin:2px 0 6px">${esc(s.prenom)} ${esc(s.nom)}</h2>
+    <p class="small muted" style="margin:0">${STROKE_NAME[pr.stroke]} · ${pr.sess} séances de natation par semaine · ${phaseOf(pr).lab.toLowerCase()}</p></div>
+  <div class="panel"><h3>Nutrition</h3>${n?`<div class="kpis"><div class="kpi"><div class="v">${b.kg} kg</div><div class="l">Poids · IMC ${n.imc.toFixed(1)}</div></div><div class="kpi"><div class="v">${n.train.kcal}</div><div class="l">kcal jour d’entraînement</div></div><div class="kpi"><div class="v">${n.train.P} g</div><div class="l">Protéines / jour</div></div></div>
+      <div class="row" style="margin-top:12px"><button class="btn" data-go="nutri-${id}">Mon plan alimentaire</button><button class="btn ghost" id="f_w">Noter mon poids du jour</button></div><div id="f_wbox"></div>`
+    :`<p class="small" style="margin-top:0">Indiquez votre poids et votre taille : l’appli calcule vos besoins et vous propose des repas avec les portions.</p><button class="btn" data-go="corps-${id}">Renseigner mes mesures</button>`}</div>
+  <div class="panel"><h3>Musculation spécifique natation</h3><p class="small" style="margin-top:0">${mu.n} séance${mu.n>1?'s':''} de ${mu.dur} min, illustrées, adaptées à votre nage (${STROKE_NAME[pr.stroke]}), votre matériel et la période de la saison.</p>
+    <div class="row">${['rot_ext','lat_band','squat_jump'].map(k=>`<div style="flex:1 1 140px;min-width:0">${exoSVG(k)}</div>`).join('')}</div>
+    <button class="btn" data-go="muscu-${id}" style="margin-top:10px">Mon programme de musculation</button></div>
+  <p class="note">Vos mesures et réglages restent sur ce téléphone uniquement.</p></div>`;
+  const fw=$('#f_w'); if(fw) fw.onclick=()=>{$('#f_wbox').innerHTML=`<div class="row" style="margin-top:10px"><input id="f_kg" inputmode="decimal" placeholder="kg" style="width:100px"><button class="btn" id="f_ok">Enregistrer</button></div>`;
+    $('#f_ok').onclick=()=>{const kg=num($('#f_kg').value); if(!(kg>=35&&kg<=200)) return; const o=getBody(s); const log=(o.log||[]).filter(x=>x.d!==today()); log.push({d:today(),kg}); log.sort((a,c)=>a.d<c.d?-1:1); o.kg=kg; o.log=log.slice(-60); saveBody(s,o); viewForme(id)}};
+  wire();
+}
+
 
 /* ---------- installation (PWA) ---------- */
 let deferredPrompt=null; window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;document.querySelectorAll('[data-install]').forEach(b=>b.hidden=false)});
@@ -1041,6 +1375,11 @@ function route(tok){
   else if(tok.startsWith('cmp-')){viewCmp(tok.slice(4)); tab='nageurs'}
   else if(tok.startsWith('prog-')){viewProg(tok.slice(5)); tab=tok.slice(5)===me()?'entr':'nageurs'}
   else if(tok.startsWith('prof-')){viewProf(tok.slice(5)); tab=tok.slice(5)===me()?'entr':'nageurs'}
+  else if(tok==='forme'){viewForme(); tab='forme'}
+  else if(tok.startsWith('forme-')){viewForme(tok.slice(6)); tab=tok.slice(6)===me()?'forme':'nageurs'}
+  else if(tok.startsWith('corps-')){viewCorps(tok.slice(6)); tab=tok.slice(6)===me()?'forme':'nageurs'}
+  else if(tok.startsWith('nutri-')){viewNutri(tok.slice(6)); tab=tok.slice(6)===me()?'forme':'nageurs'}
+  else if(tok.startsWith('muscu-')){viewMuscu(tok.slice(6)); tab=tok.slice(6)===me()?'forme':'nageurs'}
   else {viewNageurs(); tab='nageurs'}
   document.querySelectorAll('nav.bottom [data-go]').forEach(b=>b.setAttribute('aria-current',b.dataset.go===tab?'page':'false'));
 }
