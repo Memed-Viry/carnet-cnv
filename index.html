@@ -212,7 +212,7 @@ const lastCss=s=>{const a=s?cssTests(s):[];return a.length?a.slice().sort((x,y)=
 function catOf(annee,Y=REF_YEAR){const age=Y-annee; if(!annee||age<25) return null; const k=Math.floor((age-25)/5); return {age,k,grid:Math.min(k,13),coef:Math.min(k,15),label:'C'+(k+1)}}
 function gridT(level,pool,sexe,ev,cat){const g=G[`${level}_${pool}_${sexe}`];return g&&g[ev]&&cat?g[ev][cat.grid]:null}
 const coefOf=(sexe,ev,cat)=>cat?(G['COEF_'+sexe][ev]||[])[cat.coef]:null;
-function eligible(p,sw,Y=REF_YEAR){const y=+String(p.date).slice(0,4); if(!(y>=Y-2&&y<=Y)) return false; if(p.type==='maitres') return true; const c=catOf(sw.annee,y); return p.type==='nc'&&c&&c.k===0}
+function eligible(p,sw,Y=REF_YEAR){const y=+String(p.date).slice(0,4); if(!(y>=Y-3&&y<=Y)) return false; /* AR Maîtres : saisons n-2 à n, du 1er janvier de Y-3 */ if(p.type==='maitres') return true; const c=catOf(sw.annee,y); return p.type==='nc'&&c&&c.k===0}
 function qualStatus(sw,ev,season,Y=REF_YEAR){
   const cat=catOf(sw.annee,Y); if(!cat) return null;
   const ps=perfsOf(sw.id).filter(p=>p.ev===ev&&eligible(p,sw,Y)); if(!ps.length) return null;
@@ -239,7 +239,7 @@ function summary(s){
   const evs=[...new Set(perfsOf(s.id).map(p=>p.ev))]; let n1=0,n2=0;
   for(const e of evs){const a=qualStatus(s,e,'hiver'), b=qualStatus(s,e,'ete'); const lv=[a,b].map(q=>q&&q.level);
     if(lv.includes('N1')) n1++; else if(lv.includes('N2')) n2++;}
-  const recent=perfsOf(s.id).filter(p=>p.date>=String(REF_YEAR-2)); const bestPts=recent.reduce((m,p)=>Math.max(m,p.pts||0),0);
+  const recent=perfsOf(s.id).filter(p=>p.date>=String(REF_YEAR-3)); const bestPts=recent.reduce((m,p)=>Math.max(m,p.pts||0),0);
   const last=perfsOf(s.id).reduce((m,p)=>p.date>m?p.date:m,'');
   return SUMM[s.id]={n1,n2,bestPts,last,count:perfsOf(s.id).length};
 }
@@ -510,7 +510,7 @@ function clubQualifs(){
   const n1=new Set(rows.filter(r=>r.lvH==='N1'||r.lvE==='N1').map(r=>r.s.id)).size, n2=new Set(rows.map(r=>r.s.id)).size;
   const sw=[...new Set(rows.map(r=>r.s.id))].map(id=>S.sw[id]);
   $('#clubBody').innerHTML=`<div class="panel"><h2>Qualifiés France ${REF_YEAR}</h2><div class="kpis"><div class="kpi"><div class="v">${n1}</div><div class="l">Nageurs N1</div></div><div class="kpi"><div class="v">${n2}</div><div class="l">Qualifiés N1 ou N2</div></div><div class="kpi"><div class="v">${rows.length}</div><div class="l">Qualifications</div></div></div>
-    <p class="note" style="margin-top:10px">France hiver N1 : 11–14 mars ${REF_YEAR}. Performances ${REF_YEAR-2}–${REF_YEAR} en compétition Maîtres, grilles FFN de la catégorie ${REF_YEAR}.</p></div>
+    <p class="note" style="margin-top:10px">France hiver N1 : 11–14 mars ${REF_YEAR}. Performances depuis le 1er janvier ${REF_YEAR-3} en compétition Maîtres, grilles FFN de la catégorie ${REF_YEAR}.</p></div>
   ${sw.length?`<div class="list">${sw.map(s=>{const r=rows.filter(x=>x.s===s); const c=catOf(s.annee);
     return `<button class="item" data-sw="${s.id}"><span class="nm">${esc(s.nom)} ${esc(s.prenom)}</span><span class="rt">${r.some(x=>x.lvH==='N1'||x.lvE==='N1')?'<span class="badge b-n1">N1</span>':'<span class="badge b-n2">N2</span>'}</span>
       <span class="sub">${c.label} · ${r.map(x=>`${EVL[x.ev]} ${x.lvH==='N1'||x.lvE==='N1'?'N1':'N2'}`).join(' · ')}</span></button>`}).join('')}</div>`:'<div class="empty"><b>Aucun qualifié pour l’instant</b></div>'}
