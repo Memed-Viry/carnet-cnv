@@ -152,7 +152,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
     <button data-go="moi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="8" r="3.6"/><path d="M5 20c1-3.8 3.8-6 7-6s6 2.2 7 6"/></svg>Ma fiche</button>
     <button data-go="club"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4h10v4a5 5 0 0 1-10 0z"/><path d="M7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4"/><path d="M12 13v4M8 20h8"/></svg>Club</button>
     <button data-go="entr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 17c2-2 4-2 6 0s4 2 6 0 4-2 6 0"/><path d="M3 11c2-2 4-2 6 0s4 2 6 0 4-2 6 0"/><path d="M12 3v3"/></svg>Entraîn.</button>
-    <button data-go="forme"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 8v8M17.5 8v8M3.5 10.5v3M20.5 10.5v3M6.5 12h11"/></svg>Forme</button>
+    <button data-go="forme"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.4 6.8 19.1l1-5.8L3.5 9.2l5.9-.9z"/></svg>Coach</button>
   </div>
 </nav>
 
@@ -426,7 +426,7 @@ function viewFiche(id){
       <div class="panel"><h3>Mes zones d’entraînement</h3>${cs?zonesHTML(cs,css.pool)+`<p class="note" style="margin-top:8px">Test du ${fdate(css.date)}, enregistré sur ce téléphone. <button class="tlink" data-go="zones">Refaire le test</button></p>`:`<div class="empty"><b>Pas encore de test CSS</b><button class="btn" data-go="zones" style="margin-top:8px">Calculer mes zones</button></div>`}</div>
     </div>
     ${persoAnalysisHTML(s)}
-    <div class="panel"><h3>Forme hors de l’eau</h3><p class="small muted" style="margin-top:0">Nutrition selon le poids et la taille, musculation illustrée spécifique à la nage.</p><div class="row"><button class="btn" data-go="nutri-${id}">Nutrition</button><button class="btn ghost" data-go="muscu-${id}">Musculation</button></div></div>
+    <div class="panel"><h3>Coach</h3><p class="small muted" style="margin-top:0">Bilan expert, nutrition selon le poids et la taille, musculation illustrée spécifique à la nage.</p><div class="row"><button class="btn" data-go="forme-${id}">Bilan du coach</button><button class="btn" data-go="nutri-${id}">Nutrition</button><button class="btn ghost" data-go="muscu-${id}">Musculation</button></div></div>
     ${ficheExtrasHTML(s)}
     ${evs.length?`<div class="panel"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Progression</h3><select id="progEv" aria-label="Épreuve">${evs.map(e=>`<option value="${e}"${e===progEv?' selected':''}>${EVL[e]}</option>`).join('')}</select></div><div id="progChart" style="margin-top:8px">${progChart(s,progEv)}</div></div>`:''}
     ${evs.length?`<div><h3 style="margin:4px 2px 8px">Toutes les courses</h3><div class="list">${groups}</div></div>`:''}
@@ -874,7 +874,7 @@ function autoSpec(s){
 function getProf(s){
   let o={}; try{o=JSON.parse(ls.get('prof-'+s.id)||'{}')}catch(e){}
   const a=autoSpec(s);
-  const nextNat=CAL.find(e=>e.k==='nat'&&e.d&&e.d>=today())||CAL.find(e=>e.d&&e.d>=today());
+  const hasN1=summary(s).n1>0; const nextNat=CAL.find(e=>e.k==='nat'&&/hiver|été/.test(e.t)&&!(hasN1&&/N2/.test(e.t))&&e.d&&e.d>=today())||CAL.find(e=>e.k==='nat'&&e.d&&e.d>=today())||CAL.find(e=>e.d&&e.d>=today());
   return {stroke:o.stroke||a.stroke, dist:o.dist||a.dist, ev:o.ev||a.ev, comp:(o.compT!=null?CAL.findIndex(e=>e.t===o.compT):o.comp)??(nextNat?CAL.indexOf(nextNat):-1), sess:+(o.sess||3), dur:+(o.dur||60), auto:a, custom:!!o.stroke};
 }
 function saveProf(s,o){if(o.comp!=null) o.compT=o.comp>=0&&CAL[o.comp]?CAL[o.comp].t:null; ls.set('prof-'+s.id,JSON.stringify(o))}
@@ -1049,7 +1049,7 @@ const SLOTS=[['matin','Le matin'],['midi','Le midi'],['soir','Le soir']];
 function viewCorps(id){
   const s=S.sw[id]; if(!s){go('nageurs');return}
   const b=getBody(s)||{}, pr=getProf(s);
-  $('#view').innerHTML=`<button class="back" data-go="forme-${id}">‹ Forme</button><div class="stack"><div class="panel"><h2>Mon corps</h2>
+  $('#view').innerHTML=`<button class="back" data-go="forme-${id}">‹ Coach</button><div class="stack"><div class="panel"><h2>Mon corps</h2>
   <p class="small muted" style="margin-top:0">Ces mesures restent <b>uniquement sur ce téléphone</b> : personne d’autre ne les voit. Elles servent à calculer vos besoins et vos portions.</p>
   <div class="form">
     <label for="c_kg">Poids (kg)<input id="c_kg" inputmode="decimal" value="${b.kg??''}" placeholder="ex. 72"></label>
@@ -1144,7 +1144,7 @@ function viewNutri(id){
   const timing={matin:['Au réveil, 30–45 min avant : une banane ou 2 tranches de pain + miel, et un verre d’eau.','Après la séance : le petit-déjeuner complet ci-dessous (protéines + glucides) dans l’heure.'],
     midi:['Vers 10 h : la collation (pain + fromage blanc ou yaourt).','Après la séance : le déjeuner dans l’heure qui suit.'],
     soir:['Vers 16–17 h : la collation (pain + fromage blanc ou yaourt), 1 h 30 à 2 h avant.','Après la séance : le dîner dans l’heure, avec la portion de féculents complète.']}[sl];
-  $('#view').innerHTML=`<button class="back" data-go="forme-${id}">‹ Forme</button><div class="stack">
+  $('#view').innerHTML=`<button class="back" data-go="forme-${id}">‹ Coach</button><div class="stack">
   <div class="panel"><div class="muted small" style="text-transform:uppercase;letter-spacing:.07em;font-weight:600">Nutrition personnalisée</div>
     <h2 style="margin:2px 0 6px">${esc(s.prenom)} · ${b.kg} kg · ${b.cm} cm</h2>
     <div class="kpis"><div class="kpi"><div class="v">${n.imc.toFixed(1)}</div><div class="l">IMC · ${imcLab}</div></div><div class="kpi"><div class="v">${n.bmr}</div><div class="l">Métabolisme de base (kcal)</div></div>
@@ -1316,7 +1316,7 @@ function viewMuscu(id){
   const s=S.sw[id]; if(!s){go('nageurs');return}
   const pr=getProf(s), M=buildMuscu(s), mu=M.mu, ph=M.ph;
   const phTxt=ph.key==='foncier'?'Force et endurance de force : mouvements contrôlés, 2 s à la descente.':ph.key==='spec'?'Puissance : mouvements explosifs, peu de répétitions, récupération complète.':'Entretien : volume divisé par deux, dernière séance au plus tard 5 jours avant la compétition.';
-  $('#view').innerHTML=`<button class="back" data-go="forme-${id}">‹ Forme</button><div class="stack">
+  $('#view').innerHTML=`<button class="back" data-go="forme-${id}">‹ Coach</button><div class="stack">
   <div class="panel"><div class="muted small" style="text-transform:uppercase;letter-spacing:.07em;font-weight:600">Musculation spécifique natation</div>
     <h2 style="margin:2px 0 6px">${esc(s.prenom)} · ${STROKE_NAME[pr.stroke]}</h2>
     <div class="kpis"><div class="kpi"><div class="v">${mu.n}</div><div class="l">Séances / sem.</div></div><div class="kpi"><div class="v">${mu.dur} min</div><div class="l">Par séance</div></div><div class="kpi"><div class="v">${M.sessions[0]?M.sessions[0].length:0}</div><div class="l">Exercices</div></div></div>
@@ -1345,23 +1345,141 @@ function viewMuscu(id){
 /* ---------- onglet Forme ---------- */
 function viewForme(id){
   id=id||me(); const s=id?S.sw[id]:null;
-  if(!s){$('#view').innerHTML=`<div class="stack"><div class="panel"><h2>Forme hors de l’eau</h2><p>Nutrition et musculation personnalisées selon votre corps, votre nage et vos compétitions.</p>
+  if(!s){$('#view').innerHTML=`<div class="stack"><div class="panel"><h2>Votre coach</h2><p>Bilan expert personnalisé en natation, préparation physique et nutrition, selon vos temps, votre corps et vos compétitions.</p>
     <div class="hint"><span>Ouvrez votre fiche dans <b>Nageurs</b> et touchez « C’est moi » : cet onglet s’ouvrira directement sur votre programme.</span></div>
-    <div class="row" style="margin-top:12px"><button class="btn" data-go="nageurs">Trouver mon nom</button></div></div></div>`; wire(); return}
+    <div class="row" style="margin-top:12px"><button class="btn" data-go="nageurs">Trouver mon nom</button></div></div>${kbPanelHTML()}</div>`; wireKB(); wire(); return}
   const b=getBody(s), pr=getProf(s), mu=getMu(s), n=b?nutriCalc(s,b):null;
   $('#view').innerHTML=`${id!==me()?`<button class="back" data-go="s${id}">‹ ${esc(swName(s))}</button>`:''}<div class="stack">
-  <div class="panel"><div class="muted small" style="text-transform:uppercase;letter-spacing:.07em;font-weight:600">Forme hors de l’eau</div><h2 style="margin:2px 0 6px">${esc(s.prenom)} ${esc(s.nom)}</h2>
+  <div class="panel"><div class="muted small" style="text-transform:uppercase;letter-spacing:.07em;font-weight:600">Coach · natation, prépa physique, nutrition</div><h2 style="margin:2px 0 6px">${esc(s.prenom)} ${esc(s.nom)}</h2>
     <p class="small muted" style="margin:0">${STROKE_NAME[pr.stroke]} · ${pr.sess} séances de natation par semaine · ${phaseOf(pr).lab.toLowerCase()}</p></div>
+  ${coachHTML(s)}
   <div class="panel"><h3>Nutrition</h3>${n?`<div class="kpis"><div class="kpi"><div class="v">${b.kg} kg</div><div class="l">Poids · IMC ${n.imc.toFixed(1)}</div></div><div class="kpi"><div class="v">${n.train.kcal}</div><div class="l">kcal jour d’entraînement</div></div><div class="kpi"><div class="v">${n.train.P} g</div><div class="l">Protéines / jour</div></div></div>
       <div class="row" style="margin-top:12px"><button class="btn" data-go="nutri-${id}">Mon plan alimentaire</button><button class="btn ghost" id="f_w">Noter mon poids du jour</button></div><div id="f_wbox"></div>`
     :`<p class="small" style="margin-top:0">Indiquez votre poids et votre taille : l’appli calcule vos besoins et vous propose des repas avec les portions.</p><button class="btn" data-go="corps-${id}">Renseigner mes mesures</button>`}</div>
   <div class="panel"><h3>Musculation spécifique natation</h3><p class="small" style="margin-top:0">${mu.n} séance${mu.n>1?'s':''} de ${mu.dur} min, illustrées, adaptées à votre nage (${STROKE_NAME[pr.stroke]}), votre matériel et la période de la saison.</p>
     <div class="row">${['rot_ext','lat_band','squat_jump'].map(k=>`<div style="flex:1 1 140px;min-width:0">${exoSVG(k)}</div>`).join('')}</div>
     <button class="btn" data-go="muscu-${id}" style="margin-top:10px">Mon programme de musculation</button></div>
-  <p class="note">Vos mesures et réglages restent sur ce téléphone uniquement.</p></div>`;
+  ${kbPanelHTML()}
+  <p class="note">Vos mesures et réglages restent sur ce téléphone uniquement. Le coach donne des repères d’expert ; il ne remplace pas votre entraîneur ni un avis médical.</p></div>`; wireKB();
   const fw=$('#f_w'); if(fw) fw.onclick=()=>{$('#f_wbox').innerHTML=`<div class="row" style="margin-top:10px"><input id="f_kg" inputmode="decimal" placeholder="kg" style="width:100px"><button class="btn" id="f_ok">Enregistrer</button></div>`;
     $('#f_ok').onclick=()=>{const kg=num($('#f_kg').value); if(!(kg>=35&&kg<=200)) return; const o=getBody(s); const log=(o.log||[]).filter(x=>x.d!==today()); log.push({d:today(),kg}); log.sort((a,c)=>a.d<c.d?-1:1); o.kg=kg; o.log=log.slice(-60); saveBody(s,o); viewForme(id)}};
   wire();
+}
+
+/* ================= COACH EXPERT (hors ligne) ================= */
+const pct=x=>(x>0?'+':'')+(x*100).toFixed(1)+' %';
+function coachBilan(s){
+  const pr=getProf(s), pa=persoPaces(s,pr), ph=phaseOf(pr), ps=perfsOf(s.id), age=ageOf(s), b=getBody(s), mu=getMu(s);
+  const N=[],P=[],A=[]; const T=today(), dAgo=n=>new Date(Date.now()-n*864e5).toISOString().slice(0,10);
+  const sname=STROKE_NAME[pr.stroke];
+  /* --- natation --- */
+  const last=ps.reduce((m,p)=>p.date>m?p.date:m,'');
+  if(!last) N.push(['w','Aucune course enregistrée : participez à une compétition Maîtres pour obtenir des temps de référence.']);
+  else if(last<dAgo(240)) N.push(['w',`Dernière course le ${fdate(last)}. Programmez une compétition de reprise (meeting ou départemental) 6 à 8 semaines avant votre objectif pour valider les allures.`]);
+  // qualifications à portée
+  const near=[];
+  for(const ev of [...new Set(ps.map(p=>p.ev))]) for(const se of ['hiver','ete']){const q=qualStatus(s,ev,se); if(q&&q.level!=='N1'&&isFinite(q.gap1)&&q.gap1>0&&q.best&&q.gap1/q.best.t<0.025) near.push([ev,se,q.gap1,q.best.t])}
+  const seen=new Set(); near.sort((a,b)=>a[2]/a[3]-b[2]/b[3]).filter(x=>!seen.has(x[0])&&seen.add(x[0])).slice(0,3)
+    .forEach(([ev,se,g,t])=>N.push(['g',`<b>${EVL[ev]}</b> : N1 ${se==='hiver'?'hiver':'été'} à ${fmt(g)} s (${(g/t*100).toFixed(1)} %). C’est à portée en une saison avec un travail ciblé ${EVL[ev].includes('50 ')?'de vitesse et de départs':'d’allure de course'}.`]));
+  // tendance sur l'épreuve objectif
+  const ev=pr.ev, pool=ps.filter(p=>p.ev===ev&&+p.pool===25).length>=ps.filter(p=>p.ev===ev&&+p.pool===50).length?25:50;
+  const bestIn=(a,z)=>{const x=ps.filter(p=>p.ev===ev&&+p.pool===pool&&p.date>=a&&p.date<z);return x.length?Math.min(...x.map(p=>p.t)):null};
+  const y1=bestIn(dAgo(365),'9999'), y0=bestIn(dAgo(730),dAgo(365));
+  if(y1&&y0){const d=(y1-y0)/y0; const exp=age>=70?0.012:age>=50?0.007:0.004;
+    N.push([d<=0?'g':d<exp*1.5?'':'w',`<b>${EVL[ev]} (${pool} m)</b> : ${fmt(y1)} sur 12 mois contre ${fmt(y0)} l’année précédente (${pct(d)}). ${d<=0?'Progression malgré l’âge : la charge actuelle fonctionne.':d<exp*1.5?`Dans la norme du vieillissement sportif (environ ${(exp*100).toFixed(1)} % par an à ${age} ans).`:'Recul supérieur à l’effet de l’âge : vérifiez la régularité des séances, la récupération et le travail d’intensité.'}`])}
+  // analyse des passages
+  const withSp=ps.filter(p=>(p.splits||[]).length&&dist(p.ev)>=100&&dist(p.ev)<=200&&p.date>=dAgo(730));
+  const fades=withSp.map(p=>{const d=dist(p.ev), half=d/2, sp=[...p.splits,p.t], lap=p.lap||50; const idx=half/lap-1; if(idx<0||idx>=sp.length) return null; const h1=sp[idx], h2=p.t-h1; return {ev:p.ev,f:(h2-h1)/h1}}).filter(Boolean);
+  if(fades.length>=2){const m=fades.reduce((t,x)=>t+x.f,0)/fades.length;
+    N.push([m>0.12?'w':m<0.03?'w':'g',`Écart moyen 2<sup>e</sup> moitié / 1<sup>re</sup> moitié sur ${fades.length} courses de 100–200 m : <b>${pct(m)}</b>. ${m>0.12?'Départ trop rapide ou manque de tolérance lactique : travaillez les séries à allure de course avec récupération courte et partez 1 à 2 % moins vite.':m<0.03?'Départ prudent : vous avez de la marge pour attaquer davantage la première moitié (le départ plongé vaut normalement 4 à 8 %).':'Bonne gestion de course : l’écart est dans la plage idéale (4 à 10 % avec le départ plongé).'}`])}
+  // test CSS
+  const c=lastCss(s);
+  if(!c) N.push(['w','Pas de test CSS : faites le test 400 + 200 NL (onglet Entraînement) pour des zones exactes. Les allures actuelles sont estimées.']);
+  else if(c.date<dAgo(70)) N.push(['w',`Test CSS du ${fdate(c.date)} : refaites-le (toutes les 6 à 8 semaines) pour suivre votre forme aérobie.`]);
+  N.push(['',`Spécialité retenue : <b>${sname}</b>, ${DIST_GROUPS.find(d=>d[0]===pr.dist)[1].toLowerCase()}. Allure CSS ${fmt(pa.css)} /100 m.`]);
+  /* --- préparation physique --- */
+  const w=ph.weeks;
+  if(ph.key==='foncier') P.push(['',`<b>Période générale</b>${ph.comp?` (${w} semaines avant « ${esc(ph.comp.t)} »)`:''} : 70 à 80 % du volume en zones 1–2, une séance seuil et une séance vitesse par semaine. Musculation : force, 2 à 3 séances, 3 × 8–12.`]);
+  if(ph.key==='spec') P.push(['g',`<b>Préparation spécifique</b> (${w} semaines avant « ${esc(ph.comp.t)} ») : allures de course, tolérance lactique, départs et virages. Musculation : puissance, 4 × 5 explosifs, 2 séances.`]);
+  if(ph.key==='affut') P.push(['g',`<b>Affûtage</b> (${w} semaine${w>1?'s':''} avant « ${esc(ph.comp.t)} ») : baissez le volume de 40 à 60 % en gardant l’intensité et la fréquence des séances. Musculation : 1 séance d’entretien, la dernière au plus tard 5 jours avant.`]);
+  if(ph.key!=='affut'&&mu.n<2) P.push(['w','Une seule séance de musculation par semaine entretient mais ne développe pas la force : visez 2 séances en période générale.']);
+  if(age>=50) P.push(['',`À ${age} ans : gardez au moins 48 h entre deux séances intenses, ajoutez 10 min de mobilité épaules et hanches chaque jour, et privilégiez la force (elle diminue plus vite que l’endurance avec l’âge).`]);
+  if(age>=60) P.push(['','Sauts remplacés par des versions sans impact ; travaillez aussi l’équilibre (station unipodale 3 × 30 s) pour préserver les appuis.']);
+  if(['P','NL','D'].includes(pr.stroke)) P.push(['',`Nageur de ${sname} : 2 exercices de coiffe des rotateurs à chaque séance de musculation, c’est la meilleure prévention de l’épaule.`]);
+  if(pr.stroke==='B') P.push(['','Brasseur : protégez les genoux (adducteurs, fessiers, squat sumo) et échauffez progressivement le ciseau avant les séries rapides.']);
+  /* --- nutrition --- */
+  if(!b) A.push(['w','Renseignez votre poids et votre taille pour obtenir vos besoins et votre journée type en grammes.']);
+  else{const n=nutriCalc(s,b);
+    A.push(['',`Jour d’entraînement : <b>${n.train.kcal} kcal</b>, ${n.train.P} g de protéines (${(n.train.P/b.kg).toFixed(1)} g/kg) réparties en 4 prises de ${Math.round(b.kg*0.3)}–${Math.round(b.kg*0.4)} g, ${n.train.C} g de glucides.`]);
+    if(b.goal==='perte'&&ph.key!=='foncier') A.push(['w','Perte de poids et préparation spécifique ou affûtage ne font pas bon ménage : passez en maintien jusqu’à la compétition, puis reprenez la perte en période générale.']);
+    const lg=b.log||[]; if(lg.length>=2){const a=lg[lg.length-1], z=lg.find(x=>x.d>=dAgo(28))||lg[0]; const wk=Math.max(1,(new Date(a.d)-new Date(z.d))/(7*864e5)); const r=(a.kg-z.kg)/z.kg/wk;
+      if(r<-0.01) A.push(['w',`Perte rapide (${(r*100).toFixed(1)} % par semaine) : au-delà de 1 % par semaine, on perd du muscle et de la performance. Augmentez un peu les glucides autour des séances.`]);
+      else if(Math.abs(r)<=0.01&&wk>=2) A.push(['g',`Poids stable ou en évolution maîtrisée sur ${Math.round(wk)} semaines (${(r*100).toFixed(1)} % / sem.).`])}
+    if(n.imc<18.5) A.push(['w','IMC bas : un apport insuffisant augmente le risque de fatigue et de blessure. Un avis médical ou diététique est conseillé.']);
+    if(ph.comp&&ph.weeks!=null&&ph.weeks<=1) A.push(['g',`Compétition cette semaine : la veille, environ ${Math.round(b.kg*6)} g de glucides sur la journée, peu de fibres au dîner, et rien de nouveau le jour J.`]);
+    A.push(['',`Hydratation : environ ${(n.water/1000).toFixed(1)} L par jour, plus ${n.waterSes} ml par séance. On transpire aussi dans l’eau, et une perte de 2 % du poids en eau réduit la performance.`]);}
+  return {N,P,A,ph,pr};
+}
+
+/* --- base de connaissances --- */
+const KB_CAT=[['all','Tout'],['nat','Natation'],['prep','Prépa physique'],['nut','Nutrition'],['recup','Récupération et santé']];
+const KB=[
+ ['nat','Comment bien gérer un 100 m ?','En bassin de 25 m, la deuxième moitié est en général <b>4 à 8 %</b> plus lente que la première, à cause du départ plongé. Au-delà de 10 à 12 %, le départ était trop rapide. Partez « vite mais relâché » : amplitude sur le premier 25 m, accélération de la fréquence sur le dernier 25 m.'],
+ ['nat','Comment gérer un 200 m ?','Visez des 50 m intermédiaires (2e et 3e) quasi identiques, à 1 s près. Le 3e 50 m est le plus difficile : c’est là que se gagne la course. Le dernier 50 m peut être le plus rapide des trois derniers si l’allure de départ était juste.'],
+ ['nat','Qu’est-ce que la CSS et comment l’utiliser ?','La vitesse critique (CSS) est l’allure que vous pouvez tenir environ 30 min. Elle se calcule par (temps 400 − temps 200) / 2 pour 100 m. Les séries au seuil se font à l’allure CSS avec 10 à 20 s de récupération (par exemple 10 × 100). C’est le meilleur repère pour progresser en endurance.'],
+ ['nat','Combien de séances par semaine pour progresser ?','En Maîtres : 2 séances entretiennent, <b>3 à 4 séances</b> font progresser, 5 et plus sont pour les nageurs très entraînés. La régularité compte plus que le volume : 3 séances chaque semaine valent mieux que 5 une semaine sur deux.'],
+ ['nat','Comment améliorer mes virages et coulées ?','Arrivez au mur sans ralentir, en gardant une respiration avant le virage. Poussée bras en flèche, tête entre les bras, 3 à 6 ondulations rapides et serrées (limite de 15 m), puis sortie progressive avec le premier mouvement de bras sans respirer. Travaillez-les à chaque séance : 4 à 8 × 25 m virages.'],
+ ['nat','Comment progresser au départ plongé ?','Position de départ avec un pied en arrière (« track start »), poids vers l’avant, regard vers le bas. Entrée par un seul « trou » dans l’eau, corps gainé, puis coulée. Sur un 50 m, un bon départ fait gagner 0,3 à 0,6 s. Si les départs plongés vous inquiètent (dos, cervicales), demandez un départ dans l’eau, autorisé en Maîtres.'],
+ ['nat','Quelle respiration en crawl ?','En endurance : respiration en 3 temps ou en 2 temps alternés pour équilibrer la nage. En course : en 2 temps sur 200 m et plus ; sur 50 m, 2 à 4 respirations au maximum. Expirez complètement sous l’eau pour inspirer vite.'],
+ ['nat','Comment faire l’affûtage avant les France ?','Sur 10 à 21 jours, réduisez le volume de <b>40 à 60 %</b> de façon progressive, gardez l’intensité (allures de course courtes) et la fréquence des séances. Les études montrent un gain moyen d’environ 2 à 3 %. Pas de nouvel exercice ni de musculation lourde les 5 derniers jours.'],
+ ['nat','Comment m’échauffer en compétition ?','Environ 20 à 30 min, terminé 10 à 20 min avant la course : 400 à 600 m souple, éducatifs, 4 × 25 progressifs, 2 à 3 passages à allure de course, 1 à 2 départs. Restez couvert ensuite. Entre deux courses, nagez 200 à 400 m souple pour récupérer.'],
+ ['nat','Les 4 nages : quel ordre de travail ?','Ordre en course : papillon, dos, brasse, crawl. Les virages de changement de nage se travaillent spécifiquement. Une brasse faible coûte souvent le plus de temps : c’est en général la priorité.'],
+ ['prep','Pourquoi faire de la musculation quand on nage ?','La force améliore les départs, les virages et la puissance de la traction, et protège les épaules. Chez les Maîtres, elle compense aussi la perte musculaire liée à l’âge (environ 1 % par an après 50 ans sans entraînement). 2 séances de 30 à 45 min suffisent.'],
+ ['prep','Musculation avant ou après la natation ?','Si la séance d’eau est la priorité (vitesse, allure de course), faites la musculation après ou un autre jour. Un circuit de prévention léger (élastiques, gainage) peut se faire avant l’eau. Évitez la musculation jambes lourde la veille d’une séance de vitesse.'],
+ ['prep','Comment prévenir l’épaule du nageur ?','Les 4 piliers : renforcer les rotateurs externes et les muscles des omoplates (rotation externe, Y-T-W, tirage visage) 2 à 3 fois par semaine ; respirer des deux côtés ; augmenter le volume de 10 % par semaine au maximum ; limiter les plaquettes si l’épaule est sensible. Une douleur qui persiste plus d’une semaine doit être examinée.'],
+ ['prep','Faut-il s’étirer ?','Les étirements statiques longs avant l’effort diminuent un peu la puissance : préférez une mobilité dynamique (moulinets, ouvertures). Après la séance ou le soir, 5 à 10 min d’étirements doux (pectoraux, dorsaux, hanches) entretiennent l’amplitude, utile surtout après 50 ans.'],
+ ['prep','Comment éviter les crampes aux mollets ?','Elles viennent surtout de la fatigue musculaire, plus que d’un manque de sel. Évitez de pointer les pieds en permanence pendant les coulées, renforcez les mollets (montées sur pointes) et hydratez-vous. En cas de crampe : étirer doucement le mollet pied en flexion.'],
+ ['prep','Comment utiliser la sensation d’effort (RPE) ?','Notez chaque séance de 1 à 10 et multipliez par la durée en minutes : c’est la charge de séance. Si la charge de la semaine augmente de plus de 30 % par rapport à la moyenne des 4 dernières, le risque de blessure augmente.'],
+ ['prep','Combien de temps pour retrouver la forme après une coupure ?','Après 2 semaines d’arrêt, l’endurance baisse d’environ 5 à 10 % ; après 1 mois, comptez 4 à 6 semaines de reprise. Reprenez à 50 à 60 % du volume habituel, sans intensité la première semaine, puis augmentez de 10 à 15 % par semaine.'],
+ ['nut','Combien de protéines par jour ?','Pour un nageur Maître : <b>1,4 à 2,0 g par kg</b> de poids et par jour, réparties en 3 à 5 prises d’environ 0,3 à 0,4 g/kg (soit 20 à 40 g). Après 50 ans, la synthèse musculaire répond moins : visez le haut de la fourchette et une prise de 30 à 40 g après la séance.'],
+ ['nut','Combien de glucides ?','Ils dépendent de la charge : 3 à 5 g/kg par jour pour 1 h d’entraînement modéré, 5 à 7 g/kg pour 1 à 2 h, et 6 à 8 g/kg la veille d’une compétition. Les jours de repos, réduisez-les et gardez les protéines.'],
+ ['nut','Que manger avant une séance ?','2 à 3 h avant : repas digeste (féculents, protéines maigres, peu de graisses et de fibres). 30 à 60 min avant : une petite collation de glucides (banane, compote, pain et miel). Le matin à jeun, une banane suffit pour une séance de moins d’1 h.'],
+ ['nut','Que manger après une séance ?','Dans l’heure : environ 1 g/kg de glucides et 0,3 g/kg de protéines. Par exemple, un fromage blanc avec du pain et du miel, ou un lait chocolaté, ou le repas suivant s’il est proche. Ajoutez de l’eau et un peu de sel si vous avez beaucoup transpiré.'],
+ ['nut','Quels compléments sont utiles ?','Ceux qui sont scientifiquement démontrés : <b>caféine</b> (3 mg/kg, 45 à 60 min avant une course), <b>créatine</b> (3 à 5 g par jour, utile pour la force et le sprint, intéressante après 50 ans), <b>vitamine D</b> si carence l’hiver (dosage sanguin). Choisissez des produits certifiés NF V94-001 contre le risque de dopage involontaire, et demandez l’avis de votre médecin en cas de traitement.'],
+ ['nut','Comment perdre du poids sans perdre en performance ?','Déficit modéré (10 à 15 %, soit 0,3 à 0,5 kg par semaine), protéines hautes (1,8 à 2,2 g/kg), glucides concentrés autour des séances, musculation maintenue. Ne faites pas de régime pendant l’affûtage ni la semaine de compétition. La balance ne dit pas tout : suivez aussi le tour de taille.'],
+ ['nut','Comment s’hydrater ?','Environ 30 à 40 ml/kg par jour, plus 500 à 750 ml par heure de séance. Une urine claire est un bon repère. Au-delà de 1 h 15 d’effort intense, une boisson avec 30 à 60 g de glucides par litre aide à maintenir l’intensité.'],
+ ['nut','Que manger le jour d’une compétition ?','Rien de nouveau. Petit-déjeuner ou repas 3 h avant (pain, céréales, laitage ou œuf, fruit). Entre les courses : petites prises faciles (banane, compote, pain d’épices, barre de céréales) et de l’eau. Après la journée : un vrai repas avec protéines et féculents.'],
+ ['nut','Alcool et récupération ?','L’alcool réduit la synthèse musculaire et la qualité du sommeil, et déshydrate. Après une séance dure ou une compétition, réhydratez-vous et mangez d’abord. Évitez-le la veille d’une compétition.'],
+ ['recup','Combien d’heures de sommeil ?','7 à 9 h par nuit. Le sommeil est le premier outil de récupération : moins de 6 h répétées dégradent la performance, l’immunité et augmentent le risque de blessure. Une sieste de 20 min peut compenser une nuit courte, et les séances très tôt imposent de se coucher plus tôt.'],
+ ['recup','Comment savoir si je suis surentraîné ?','Les signaux : fatigue persistante, baisse des temps malgré l’entraînement, sommeil perturbé, irritabilité, fréquence cardiaque au réveil plus haute de 5 à 10 battements, petites infections à répétition. Dans ce cas : 3 à 7 jours de volume réduit de moitié, sommeil et alimentation suffisante. Si cela dure plus de 2 semaines, consultez.'],
+ ['recup','Bain froid, sauna, massage : utile ?','Le bain froid (10 à 15 °C, 10 min) réduit les courbatures entre deux journées de compétition, mais pris systématiquement après la musculation il peut freiner les gains de force. Le sauna et le massage améliorent la sensation de récupération. Aucun ne remplace le sommeil et l’alimentation.'],
+ ['recup','Nager avec une douleur à l’épaule ?','Douleur légère et qui disparaît en nageant : réduisez les plaquettes et le papillon, gardez la rotation externe. Douleur pendant le mouvement, la nuit ou plus d’une semaine : arrêtez les mouvements douloureux et consultez un médecin du sport ou un kiné. Battements de jambes et autres nages restent souvent possibles.'],
+ ['recup','Masters et âge : à quel point ralentit-on ?','En moyenne, les temps augmentent d’environ 0,5 à 1 % par an après 35 à 40 ans, et davantage après 70 ans. Les nageurs qui gardent de l’intensité et de la musculation ralentissent nettement moins. Les grilles FFN par catégorie de 5 ans tiennent compte de ce déclin.'],
+ ['recup','Femmes : fer, cycle et performance','Les nageuses ont un risque plus élevé de carence en fer (fatigue, essoufflement) : un dosage sanguin (ferritine) une fois par an est utile. Les effets du cycle sur la performance sont très individuels : notez vos sensations pour adapter les séances intenses.']
+];
+function kbHTML(){
+  const f=pref('kb_cat','all'), q=norm(pref('kb_q',''));
+  const L=KB.filter(([c,qq,a])=>(f==='all'||c===f)&&(!q||norm(qq+' '+a.replace(/<[^>]+>/g,'')).includes(q)));
+  return L.length?L.map(([c,qq,a])=>`<details style="background:var(--sunk);border-radius:8px;padding:10px 12px"><summary style="cursor:pointer;font-weight:600">${qq}<span class="small muted" style="font-weight:400"> · ${KB_CAT.find(x=>x[0]===c)[1]}</span></summary><p style="margin:8px 0 0">${a}</p></details>`).join(''):'<p class="muted">Aucune réponse pour cette recherche. Essayez un autre mot (ex. « épaule », « protéines », « affûtage »).</p>';
+}
+function coachHTML(s){
+  const B=coachBilan(s), li=x=>x.map(([c,t])=>`<li class="${c}">${t}</li>`).join('');
+  return `<div class="panel"><h3>Bilan du coach</h3><p class="small muted" style="margin-top:0">Recalculé à chaque ouverture à partir de vos temps, de vos passages, de votre calendrier et de vos mesures.</p>
+    <h3 style="font-size:.95rem;margin:12px 0 6px">Natation</h3><ul class="obs">${li(B.N)}</ul>
+    <h3 style="font-size:.95rem;margin:14px 0 6px">Préparation physique</h3><ul class="obs">${li(B.P)}</ul>
+    <h3 style="font-size:.95rem;margin:14px 0 6px">Nutrition</h3><ul class="obs">${li(B.A)}</ul>
+    <div class="row" style="margin-top:12px"><button class="btn" data-go="prog-${s.id}">Séances de natation</button><button class="btn ghost" data-go="muscu-${s.id}">Musculation</button><button class="btn ghost" data-go="nutri-${s.id}">Nutrition</button></div></div>`;
+}
+function kbPanelHTML(){
+  return `<div class="panel"><h3>Questions au coach</h3><p class="small muted" style="margin-top:0">Réponses d’expert en natation, préparation physique et nutrition du sport, à jour des recommandations actuelles.</p>
+    <input type="search" id="kbq" placeholder="Rechercher : épaule, protéines, affûtage, virage…" value="${esc(pref('kb_q',''))}" aria-label="Rechercher une question">
+    <div style="margin-top:8px">${chipsHTML(KB_CAT,pref('kb_cat','all'),'data-kb')}</div>
+    <div id="kbList" class="stack" style="gap:8px;margin-top:10px">${kbHTML()}</div></div>`;
+}
+function wireKB(){
+  const q=$('#kbq'); if(!q) return;
+  q.oninput=()=>{setPref('kb_q',q.value);$('#kbList').innerHTML=kbHTML()};
+  document.querySelectorAll('[data-kb]').forEach(b=>b.onclick=()=>{setPref('kb_cat',b.dataset.kb);document.querySelectorAll('[data-kb]').forEach(x=>x.setAttribute('aria-pressed',x===b));$('#kbList').innerHTML=kbHTML()});
 }
 
 
