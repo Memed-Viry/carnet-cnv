@@ -462,6 +462,7 @@ function viewFiche(id){
       <div class="panel"><h3>Mes zones d’entraînement</h3>${cs?zonesHTML(cs,css.pool)+`<p class="note" style="margin-top:8px">Test du ${fdate(css.date)}, enregistré sur ce téléphone. <button class="tlink" data-go="zones">Refaire le test</button></p>`:`<div class="empty"><b>Pas encore de test CSS</b><button class="btn" data-go="zones" style="margin-top:8px">Calculer mes zones</button></div>`}</div>
     </div>
     ${persoAnalysisHTML(s)}
+    ${bodyFicheHTML(s)}
     <div class="panel"><h3>Coach</h3><p class="small muted" style="margin-top:0">Bilan expert, nutrition selon le poids et la taille, musculation illustrée spécifique à la nage.</p><div class="row"><button class="btn" data-go="forme-${id}">Bilan du coach</button><button class="btn" data-go="nutri-${id}">Nutrition</button><button class="btn ghost" data-go="muscu-${id}">Musculation</button></div></div>
     ${ficheExtrasHTML(s)}
     ${evs.length?`<div class="panel"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Progression</h3><select id="progEv" aria-label="Épreuve">${evs.map(e=>`<option value="${e}"${e===progEv?' selected':''}>${EVL[e]}</option>`).join('')}</select></div><div id="progChart" style="margin-top:8px">${progChart(s,progEv)}</div></div>`:''}
@@ -469,7 +470,7 @@ function viewFiche(id){
   </div>`;
   const pe=$('#progEv'); if(pe) pe.onchange=()=>{progEv=pe.value;$('#progChart').innerHTML=progChart(s,progEv)};
   document.querySelectorAll('[data-more]').forEach(b=>b.onclick=()=>{OPEN.add(id+b.dataset.more); const y=window.scrollY; viewFiche(id); window.scrollTo(0,y)});
-  wireFicheExtras(s);
+  wireFicheExtras(s); wireBodyFiche(s);
   $('#meBtn').onclick=()=>{if(isMe) ls.del('me'); else ls.set('me',id); viewFiche(id)};
   wire();
 }
@@ -1576,6 +1577,29 @@ document.addEventListener('click',e=>{
   const p=b.closest('.panel'); if(p) doPrint([p],b.dataset.title||'Séance');
 });
 const PBTN=(t,attr='data-print')=>`<button class="pbtn noprint" ${attr} data-title="${t}" aria-label="Imprimer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V3h12v6M6 18H4a1 1 0 0 1-1-1v-6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6a1 1 0 0 1-1 1h-2"/><rect x="6" y="14" width="12" height="7"/></svg>Imprimer</button>`;
+
+/* ---------- fiche : taille et poids ---------- */
+function bodyFicheHTML(s){
+  const b=getBody(s)||{}, n=b.kg&&b.cm?nutriCalc(s,b):null;
+  const imcLab=n?(n.imc<18.5?'insuffisance pondérale':n.imc<25?'corpulence normale':n.imc<30?'surpoids':'obésité'):'';
+  return `<div class="panel" id="bodyPanel"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Taille et poids</h3><span class="small muted">gardés sur ce téléphone</span></div>
+    <div class="form" style="margin-top:10px">
+      <label for="fb_kg">Poids (kg)<input id="fb_kg" inputmode="decimal" value="${b.kg??''}" placeholder="ex. 72"></label>
+      <label for="fb_cm">Taille (cm)<input id="fb_cm" inputmode="numeric" value="${b.cm??''}" placeholder="ex. 178"></label>
+      <label for="fb_goal" class="wide">Objectif${selHTML('fb_goal',GOALS,b.goal||'perf','Objectif')}</label>
+      <div class="wide row"><button class="btn" id="fb_ok">${n?'Mettre à jour':'Enregistrer'}</button>${n?`<button class="btn ghost" data-go="nutri-${s.id}">Plan alimentaire complet</button>`:''}<span id="fb_msg" class="small muted"></span></div></div>
+    ${n?`<div class="kpis" style="margin-top:12px"><div class="kpi"><div class="v">${n.imc.toFixed(1)}</div><div class="l">IMC · ${imcLab}</div></div><div class="kpi"><div class="v">${n.train.kcal}</div><div class="l">kcal jour d’entraînement</div></div><div class="kpi"><div class="v">${n.rest.kcal}</div><div class="l">kcal jour de repos</div></div><div class="kpi"><div class="v">${n.train.P} g</div><div class="l">Protéines / jour</div></div><div class="kpi"><div class="v">${n.train.C} g</div><div class="l">Glucides (entraînement)</div></div><div class="kpi"><div class="v">${((n.water+n.waterSes)/1000).toFixed(1)} L</div><div class="l">Eau jour d’entraînement</div></div></div>
+      <ul class="obs" style="margin-top:10px">${coachBilan(s).A.map(([c,t])=>`<li class="${c}">${t}</li>`).join('')}</ul>`
+    :`<p class="small muted" style="margin:10px 0 0">Avec le poids et la taille, l’appli calcule les besoins en calories, protéines, glucides et eau selon les séances et la période de la saison, et propose une journée type en grammes.</p>`}</div>`;
+}
+function wireBodyFiche(s){
+  const b=$('#fb_ok'); if(!b) return;
+  b.onclick=()=>{const kg=num($('#fb_kg').value), cm=num($('#fb_cm').value);
+    if(!(kg>=35&&kg<=200)||!(cm>=130&&cm<=220)){$('#fb_msg').textContent='Poids 35–200 kg et taille 130–220 cm.';return}
+    const o=getBody(s)||{diet:'omni',job:'1.3',slot:'soir'}; const log=(o.log||[]).filter(x=>x.d!==today()); log.push({d:today(),kg}); log.sort((a,c)=>a.d<c.d?-1:1);
+    Object.assign(o,{kg,cm,goal:$('#fb_goal').value,log:log.slice(-60)}); saveBody(s,o);
+    const y=window.scrollY; viewFiche(s.id); window.scrollTo(0,y); const m=$('#fb_msg'); if(m) m.textContent='Enregistré ✓'};
+}
 
 /* ---------- installation (PWA) ---------- */
 let deferredPrompt=null; window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;document.querySelectorAll('[data-install]').forEach(b=>b.hidden=false)});
