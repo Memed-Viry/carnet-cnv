@@ -154,6 +154,10 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
   #printArea img.pimg{width:100%;max-height:270mm;object-fit:contain;display:block;margin:0 auto}
   #printArea .phead{display:flex;justify-content:space-between;border-bottom:2px solid #1a7f37;padding-bottom:4px;margin-bottom:6mm;font:600 11pt sans-serif}
 }
+.tin{display:inline-flex;align-items:center;gap:3px;font-family:var(--f-mono)}
+.tin input{width:3.2em;text-align:center;padding:10px 4px;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.tin span{color:var(--muted);font-weight:700}
+.tin small{display:block}
 </style>
 
 <div class="rope" aria-hidden="true"></div>
@@ -214,6 +218,19 @@ const fdate=d=>d?new Date(d+'T12:00:00').toLocaleDateString('fr-FR',{day:'2-digi
 const norm=t=>String(t||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
 const ls={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 
+/* ---------- saisie de temps sans « : » (clavier numérique) ---------- */
+function TIN(id,sec,cs=true){
+  const ok=sec!=null&&isFinite(sec)&&sec>0; const m=ok?Math.floor(sec/60):'', r=ok?sec-m*60:0, ss=ok?String(Math.floor(r+1e-6)).padStart(2,'0'):'', cc=ok?String(Math.round((r-Math.floor(r+1e-6))*100)%100).padStart(2,'0'):'';
+  return `<span class="tin" data-tin="${id}"><input inputmode="numeric" pattern="[0-9]*" maxlength="2" data-p="m" value="${ok?m:''}" placeholder="min" aria-label="minutes"><span>:</span><input inputmode="numeric" pattern="[0-9]*" maxlength="2" data-p="s" value="${ss}" placeholder="s" aria-label="secondes">${cs?`<span>.</span><input inputmode="numeric" pattern="[0-9]*" maxlength="2" data-p="c" value="${cc}" placeholder="cc" aria-label="centièmes">`:''}<input type="hidden" id="${id}" value="${ok?fmt(sec,cs?2:0):''}"></span>`;
+}
+document.addEventListener('input',e=>{const w=e.target.closest&&e.target.closest('.tin'); if(!w||e.target.type==='hidden') return;
+  const v=p=>{const x=w.querySelector(`[data-p="${p}"]`);return x?x.value.replace(/\D/g,''):''};
+  const m=v('m'),sc=v('s'),c=v('c'), h=w.querySelector('input[type=hidden]');
+  h.value=(m||sc||c)?`${+m||0}:${(sc||'0').padStart(2,'0')}${w.querySelector('[data-p="c"]')?'.'+(c||'0').padEnd(2,'0'):''}`:'';
+  if(e.target.value.replace(/\D/g,'').length>=2){const ins=[...w.querySelectorAll('input:not([type=hidden])')];const n=ins[ins.indexOf(e.target)+1];if(n){n.focus();n.select&&n.select()}}
+  h.dispatchEvent(new Event('change',{bubbles:true}));
+});
+document.addEventListener('focusout',e=>{const t=e.target; if(!t.dataset||!t.closest||!t.closest('.tin')) return; const v=t.value.replace(/\D/g,''); if(v.length===1){if(t.dataset.p==='s') t.value=v.padStart(2,'0'); if(t.dataset.p==='c') t.value=v.padEnd(2,'0')}});
 /* ---------- données ---------- */
 const S={sw:{},perfs:{}}; const BY={};
 for(const s of DATA.sw){
@@ -469,8 +486,8 @@ function viewZones(){
   const id=me(), s=id?S.sw[id]:null, c=s?lastCss(s):null;
   $('#view').innerHTML=`<div class="stack"><div class="panel"><h2>Mes zones (test CSS)</h2>
     <p class="muted small" style="margin-top:0">Nagez un 400 puis un 200 nage libre à fond, 10 à 15 min de récupération entre les deux. La vitesse critique (CSS) = 200 m ÷ (T400 − T200). Les zones 1 à 5 en découlent.</p>
-    <div class="form"><label for="z4">Temps 400 m<input id="z4" class="t" inputmode="decimal" value="${c?fmt(c.t400):''}" placeholder="5:40.00"></label>
-      <label for="z2">Temps 200 m<input id="z2" class="t" inputmode="decimal" value="${c?fmt(c.t200):''}" placeholder="2:38.00"></label>
+    <div class="form"><label for="z4">Temps 400 m${TIN('z4',c?c.t400:null)}</label>
+      <label for="z2">Temps 200 m${TIN('z2',c?c.t200:null)}</label>
       <label for="zp">Bassin<select id="zp"><option value="25">25 m</option><option value="50"${c&&+c.pool===50?' selected':''}>50 m</option></select></label>
       <label for="zd">Date<input id="zd" type="date" value="${c?c.date:today()}"></label>
       <div class="wide row"><button class="btn" id="zc">Calculer</button>${s?`<button class="btn ghost" id="zs">Enregistrer pour ${esc(s.prenom)}</button>`:''}<span id="zm" class="small muted"></span></div></div>
@@ -772,7 +789,7 @@ function objectifsHTML(s){
     <div style="height:8px;border-radius:4px;background:var(--line);margin:8px 0 4px;overflow:hidden"><div style="height:100%;width:${g!=null&&g<=0?100:pct}%;background:${g!=null&&g<=0?'var(--ok)':'var(--accent)'}"></div></div>
     <div class="small muted">${b?(g<=0?`Atteint ✓ (meilleur ${fmt(b.t)})`:`Meilleur ${fmt(b.t)} · reste <b class="t">${fmt(g)}</b>`):'Pas encore de temps dans ce bassin'}</div></div>`}).join('');
   return `<div class="panel"><h3>Mes objectifs</h3>${rows?`<div class="stack" style="gap:8px;margin-bottom:10px">${rows}</div>`:'<p class="small muted" style="margin-top:0">Fixez un temps visé par épreuve : la jauge suit votre progression.</p>'}
-    <div class="row">${selHTML('oev',evs.length?EVS.filter(([k])=>evs.includes(k)):EVS,evs[0]||'50NL','Épreuve')}${selHTML('opool',[[25,'25 m'],[50,'50 m']],25,'Bassin')}<input id="ot" class="t" inputmode="decimal" placeholder="Temps visé" style="width:120px"><button class="btn ghost" id="oadd">Ajouter</button></div>
+    <div class="row">${selHTML('oev',evs.length?EVS.filter(([k])=>evs.includes(k)):EVS,evs[0]||'50NL','Épreuve')}${selHTML('opool',[[25,'25 m'],[50,'50 m']],25,'Bassin')}${TIN('ot',null)}<button class="btn ghost" id="oadd">Ajouter</button></div>
     <p class="note" style="margin-top:8px">Enregistré sur ce téléphone uniquement.</p></div>`;
 }
 function wireObjectifs(s){
@@ -851,7 +868,7 @@ function viewEntr(){
     <div class="row"><button class="btn" data-go="prog-${s.id}">Voir mes séances de la semaine</button><button class="btn ghost" data-go="prof-${s.id}">Réglages</button></div></div>`
   :`<div class="hint"><span>Indiquez « C’est moi » sur votre fiche pour obtenir un <b>programme personnalisé</b> selon votre spécialité et vos temps.</span></div>`}
   <div class="panel"><h2>Séance libre</h2>
-    <div class="form"><label for="sc">Allure CSS /100 m${cs?` <span class="muted" style="font-weight:400">(votre test)</span>`:''}<input id="sc" class="t" inputmode="decimal" value="${fmt(cssPace,0).replace(/^(\d+):(\d)$/,'$1:0$2')}"></label>
+    <div class="form"><label for="sc">Allure CSS /100 m${cs?` <span class="muted" style="font-weight:400">(votre test)</span>`:''}${TIN('sc',cssPace,false)}</label>
     <label for="st">Objectif${selHTML('st',Object.entries(SETS).map(([k,v])=>[k,v.lab]),pref('ses_type','z4'),'Objectif')}</label>
     <label for="sd">Durée${selHTML('sd',[[45,'45 min'],[60,'1 h'],[75,'1 h 15'],[90,'1 h 30']],pref('ses_dur',60),'Durée')}</label>
     <label for="sn">Nage${selHTML('sn',STROKES,pref('ses_st','NL'),'Nage')}</label>
