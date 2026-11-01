@@ -158,6 +158,8 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .tin input{width:3.2em;text-align:center;padding:10px 4px;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
 .tin span{color:var(--muted);font-weight:700}
 .tin small{display:block}
+.gridtbl th:first-child,.gridtbl td:first-child{position:sticky;left:0;z-index:2;background:var(--surface);box-shadow:2px 0 0 var(--line)}
+.gridtbl thead th:first-child{background:var(--sunk);z-index:3}
 </style>
 
 <div class="rope" aria-hidden="true"></div>
@@ -506,7 +508,7 @@ function viewGrilles(T='#view'){
   $(T).innerHTML=`<div class="stack"><div class="panel"><h2>Grilles de qualification</h2>
     <div class="row" style="margin-bottom:10px"><select id="gs" aria-label="Sexe"><option value="F"${sx==='F'?' selected':''}>Dames</option><option value="M"${sx==='M'?' selected':''}>Messieurs</option></select>
     <select id="gg" aria-label="Grille"><option value="N1_25"${key==='N1_25'?' selected':''}>N1 · hiver / été en 25 m</option><option value="N1_50"${key==='N1_50'?' selected':''}>N1 · été en 50 m</option><option value="N2_25"${key==='N2_25'?' selected':''}>N2 · hiver / été en 25 m</option><option value="N2_50"${key==='N2_50'?' selected':''}>N2 · été en 50 m</option></select></div>
-    <div class="tbl-wrap"><table><thead><tr><th>Épreuve</th>${cats.map((c,i)=>`<th class="num"${myCat&&myCat.grid===i&&s.sexe===sx?' style="color:var(--accent)"':''}>${c}</th>`).join('')}</tr></thead><tbody>${
+    <div class="tbl-wrap"><table class="gridtbl"><thead><tr><th>Épreuve</th>${cats.map((c,i)=>`<th class="num"${myCat&&myCat.grid===i&&s.sexe===sx?' style="color:var(--accent)"':''}>${c}</th>`).join('')}</tr></thead><tbody>${
       EVS.filter(([k])=>g[k]).map(([k,l])=>`<tr><td><b>${l}</b></td>${g[k].map((t,i)=>`<td class="num t"${myCat&&myCat.grid===i&&s.sexe===sx?' style="background:var(--accent-soft)"':''}>${fmt(t)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>
     <p class="note" style="margin-top:10px">Hiver : temps réalisés en 25 m ou 50 m. Été : grille selon le bassin. Fenêtre : saison en cours et deux précédentes, compétitions Maîtres (natation course aussi pour les C1). Source : <a href="https://www.ffnatation.fr/sites/default/files/2025-11/AR_Ma%C3%AEtres_2026_VF3.pdf" target="_blank" rel="noopener">Annuel Règlements Maîtres FFN 2026</a>.</p></div></div>`;
   $('#gs').onchange=e=>{ls.set('g_sexe',e.target.value);viewGrilles(T)}; $('#gg').onchange=e=>{ls.set('g_grid',e.target.value);viewGrilles(T)};
