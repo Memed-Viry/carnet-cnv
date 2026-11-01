@@ -531,7 +531,7 @@ const pref=(k,d)=>ls.get('p_'+k)||d, setPref=(k,v)=>ls.set('p_'+k,v);
 async function copyText(t,el){try{await navigator.clipboard.writeText(t);if(el)el.textContent='Lien copié.'}catch(e){if(el)el.innerHTML=`Copiez ce lien : <input value="${esc(t)}" readonly style="width:100%;margin-top:4px" onfocus="this.select()">`}}
 
 /* ---------- Onglet Club ---------- */
-const CLUB_TABS=[['qualifs','Qualifiés'],['cap','Capitaine'],['records','Records'],['class','Classements'],['actus','Actualités'],['relais','Relais'],['ic','Interclubs'],['cal','Calendrier'],['grilles','Grilles'],['liens','Liens']];
+const CLUB_TABS=[['qualifs','Qualifiés'],['cap','Captain'],['records','Records'],['class','Classements'],['actus','Actualités'],['relais','Relais'],['ic','Interclubs'],['cal','Calendrier'],['grilles','Grilles'],['liens','Liens']];
 function viewClub(sub){
   sub=CLUB_TABS.some(t=>t[0]===sub)?sub:pref('club','qualifs'); setPref('club',sub);
   $('#view').innerHTML=`<div class="stack"><div class="sticky-search">${chipsHTML(CLUB_TABS,sub,'data-cs')}</div><div id="clubBody" class="stack"></div></div>`;
@@ -1644,7 +1644,7 @@ function viewCaptain(){
   const mode=pref('cap_mode','relais'), P=capPresent(), all=swList().filter(s=>catOf(s.annee));
   const nP=P?all.filter(s=>P.has(s.id)).length:all.length;
   const rel=pref('cap_rel','4x50NL'), g=pref('cap_g','X'), pool=+pref('cap_pool',25), win=pref('cap_win','2'), one=pref('cap_one','1')==='1', maxT=+pref('cap_max',8);
-  $('#clubBody').innerHTML=`<div class="panel"><h2>Capitaine</h2><p class="small muted" style="margin-top:0">Composez les équipes qui rapportent le plus de points FFN avec les nageurs présents : relais par sexe ou mixtes selon les catégories d’âge, ou équipes Interclubs.</p>
+  $('#clubBody').innerHTML=`<div class="panel"><h2>Captain</h2><p class="small muted" style="margin-top:0">Composez les équipes qui rapportent le plus de points FFN avec les nageurs présents : relais par sexe ou mixtes selon les catégories d’âge, ou équipes Interclubs.</p>
     <details${P?'':' open'}><summary style="cursor:pointer;font-weight:600;color:var(--accent)">Nageurs présents : ${nP} / ${all.length}</summary>
       <div class="row" style="margin:8px 0"><input type="search" id="cap_q" placeholder="Filtrer" style="flex:1"><button class="pbtn" id="cap_all">Tous</button><button class="pbtn" id="cap_none">Aucun</button></div>
       <div id="cap_list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:4px 10px;max-height:300px;overflow:auto">${all.map(s=>`<label class="small" data-n="${esc(norm(swName(s)))}" style="display:flex;gap:6px;align-items:center;padding:4px 0"><input type="checkbox" data-cp="${s.id}"${!P||P.has(s.id)?' checked':''} style="padding:0;width:auto"> ${esc(s.prenom)} ${esc(s.nom)} <span class="muted">${s.sexe==='F'?'D':'H'} ${ageAt(s)}</span></label>`).join('')}</div></details>
