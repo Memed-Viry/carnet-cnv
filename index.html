@@ -1351,12 +1351,13 @@ function viewForme(id){
   id=id||me(); const s=id?S.sw[id]:null;
   if(!s){$('#view').innerHTML=`<div class="stack"><div class="panel"><h2>Votre coach</h2><p>Bilan expert personnalisé en natation, préparation physique et nutrition, selon vos temps, votre corps et vos compétitions.</p>
     <div class="hint"><span>Ouvrez votre fiche dans <b>Nageurs</b> et touchez « C’est moi » : cet onglet s’ouvrira directement sur votre programme.</span></div>
-    <div class="row" style="margin-top:12px"><button class="btn" data-go="nageurs">Trouver mon nom</button></div></div>${kbPanelHTML()}</div>`; wireKB(); wire(); return}
+    <div class="row" style="margin-top:12px"><button class="btn" data-go="nageurs">Trouver mon nom</button></div></div>${stretchHTML()}${kbPanelHTML()}</div>`; wireKB(); wireStretch(); wire(); return}
   const b=getBody(s), pr=getProf(s), mu=getMu(s), n=b?nutriCalc(s,b):null;
   $('#view').innerHTML=`${id!==me()?`<button class="back" data-go="s${id}">‹ ${esc(swName(s))}</button>`:''}<div class="stack">
   <div class="panel"><div class="muted small" style="text-transform:uppercase;letter-spacing:.07em;font-weight:600">Coach · natation, prépa physique, nutrition</div><h2 style="margin:2px 0 6px">${esc(s.prenom)} ${esc(s.nom)}</h2>
     <p class="small muted" style="margin:0">${STROKE_NAME[pr.stroke]} · ${pr.sess} séances de natation par semaine · ${phaseOf(pr).lab.toLowerCase()}</p></div>
   ${coachHTML(s)}
+  ${stretchHTML()}
   <div class="panel"><h3>Nutrition</h3>${n?`<div class="kpis"><div class="kpi"><div class="v">${b.kg} kg</div><div class="l">Poids · IMC ${n.imc.toFixed(1)}</div></div><div class="kpi"><div class="v">${n.train.kcal}</div><div class="l">kcal jour d’entraînement</div></div><div class="kpi"><div class="v">${n.train.P} g</div><div class="l">Protéines / jour</div></div></div>
       <div class="row" style="margin-top:12px"><button class="btn" data-go="nutri-${id}">Mon plan alimentaire</button><button class="btn ghost" id="f_w">Noter mon poids du jour</button></div><div id="f_wbox"></div>`
     :`<p class="small" style="margin-top:0">Indiquez votre poids et votre taille : l’appli calcule vos besoins et vous propose des repas avec les portions.</p><button class="btn" data-go="corps-${id}">Renseigner mes mesures</button>`}</div>
@@ -1364,7 +1365,7 @@ function viewForme(id){
     <div class="row">${['rot_ext','lat_band','squat_jump'].map(k=>`<div style="flex:1 1 140px;min-width:0">${exoSVG(k)}</div>`).join('')}</div>
     <button class="btn" data-go="muscu-${id}" style="margin-top:10px">Mon programme de musculation</button></div>
   ${kbPanelHTML()}
-  <p class="note">Vos mesures et réglages restent sur ce téléphone uniquement. Le coach donne des repères d’expert ; il ne remplace pas votre entraîneur ni un avis médical.</p></div>`; wireKB();
+  <p class="note">Vos mesures et réglages restent sur ce téléphone uniquement. Le coach donne des repères d’expert ; il ne remplace pas votre entraîneur ni un avis médical.</p></div>`; wireKB(); wireStretch(id);
   const fw=$('#f_w'); if(fw) fw.onclick=()=>{$('#f_wbox').innerHTML=`<div class="row" style="margin-top:10px"><input id="f_kg" inputmode="decimal" placeholder="kg" style="width:100px"><button class="btn" id="f_ok">Enregistrer</button></div>`;
     $('#f_ok').onclick=()=>{const kg=num($('#f_kg').value); if(!(kg>=35&&kg<=200)) return; const o=getBody(s); const log=(o.log||[]).filter(x=>x.d!==today()); log.push({d:today(),kg}); log.sort((a,c)=>a.d<c.d?-1:1); o.kg=kg; o.log=log.slice(-60); saveBody(s,o); viewForme(id)}};
   wire();
@@ -1486,6 +1487,39 @@ function wireKB(){
   document.querySelectorAll('[data-kb]').forEach(b=>b.onclick=()=>{setPref('kb_cat',b.dataset.kb);document.querySelectorAll('[data-kb]').forEach(x=>x.setAttribute('aria-pressed',x===b));$('#kbList').innerHTML=kbHTML()});
 }
 
+
+/* ---------- étirements (jours de repos) ---------- */
+const STRETCH=[
+ {img:'etirements-1.jpg',t:'Routine A : mobilité et étirements classiques',ex:[
+  ['Cercles de bras contrôlés','2 × 10 vers l’avant + 10 vers l’arrière, mouvement lent, épaules basses.'],
+  ['Wall slides','2 × 8 à 10, dos contre le mur, monter les bras sans cambrer.'],
+  ['Passages de bâton','2 × 8 lents, prise large, passer au-dessus de la tête sans forcer.'],
+  ['Pompes scapulaires','2 × 8 à 10, en planche : rapprocher puis écarter les omoplates.'],
+  ['Étirement triceps','2 × 25 à 30 s par bras, coude vers le plafond.'],
+  ['Étirement croisé de l’épaule','2 × 25 à 30 s par bras, tirer doucement le bras devant la poitrine.'],
+  ['Ouverture pectoraux au mur','2 × 25 à 30 s par côté, avant-bras au mur, tourner légèrement le buste.'],
+  ['Étirement grand dorsal','2 × 25 à 30 s, mains sur un banc, pousser la poitrine vers le sol.']]},
+ {img:'etirements-2.jpg',t:'Routine B : rotation et ouverture du haut du dos',ex:[
+  ['Thread the needle','2 × 6 à 8 par côté, à 4 pattes : glisser un bras sous le corps puis ouvrir.'],
+  ['Open book','2 × 6 à 8 par côté, allongé sur le côté, genoux fixes, ouvrir le haut du dos.'],
+  ['Rotation externe avec serviette','2 × 20 à 30 s par côté, ouverture douce sans tirer fort.'],
+  ['Extensions thoraciques sur rouleau','2 × 6 à 8 lentes, laisser le haut du dos s’étendre.'],
+  ['Sleeper stretch','2 × 20 à 30 s par côté, pousser l’avant-bras vers le sol sans douleur.'],
+  ['Étirement biceps au mur','2 × 20 à 30 s par côté, bras tendu derrière soi.'],
+  ['Child’s pose mains décalées','2 × 20 à 30 s par côté, fesses vers les talons.'],
+  ['Étirement des avant-bras','2 × 20 s paume vers le haut puis vers le bas.']]}];
+function stretchHTML(){
+  const wk=Math.floor((Date.now()/864e5+3)/7), cur=+(pref('str_r',String(wk%2)));
+  const R=STRETCH[cur];
+  return `<div class="panel"><h3>Étirements · jours de repos</h3><p class="small muted" style="margin-top:0">10 à 15 min, 3 à 4 fois par semaine, sans douleur. Alternez les deux routines d’une semaine à l’autre : l’appli propose celle de la semaine.</p>
+    ${chipsHTML([['0','Routine A'],['1','Routine B']],String(cur),'data-str')}
+    <h3 style="font-size:.95rem;margin:12px 0 6px">${R.t}</h3>
+    <a href="${R.img}" target="_blank" rel="noopener" aria-label="Agrandir la fiche"><img src="${R.img}" alt="${esc(R.t)} : 8 exercices illustrés" loading="lazy" style="width:100%;height:auto;border-radius:10px;border:1px solid var(--line);display:block"></a>
+    <p class="small muted" style="margin:6px 0 0">Touchez l’image pour l’agrandir.</p>
+    <details style="margin-top:10px"><summary style="cursor:pointer;font-weight:600;color:var(--accent)">Liste des exercices</summary><ol style="margin:8px 0 0;padding-left:20px;display:flex;flex-direction:column;gap:6px">${R.ex.map(([n,d])=>`<li><b>${n}</b> : ${d}</li>`).join('')}</ol></details>
+    <ul class="obs" style="margin-top:10px"><li>Objectif : relâcher, pas fatiguer. Respirez lentement, tension légère à modérée.</li><li>Aucun mouvement douloureux. Idéal les jours sans natation ni musculation, ou le soir après une séance légère.</li></ul></div>`;
+}
+function wireStretch(id){document.querySelectorAll('[data-str]').forEach(b=>b.onclick=()=>{setPref('str_r',b.dataset.str);const y=window.scrollY;viewForme(id);window.scrollTo(0,y)})}
 
 /* ---------- installation (PWA) ---------- */
 let deferredPrompt=null; window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;document.querySelectorAll('[data-install]').forEach(b=>b.hidden=false)});
