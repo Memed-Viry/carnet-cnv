@@ -135,6 +135,25 @@ nav.bottom button[aria-current="page"]{color:var(--accent)}
 a{color:var(--accent)}
 .sticky-search{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:8px;display:flex;flex-direction:column;gap:8px}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+#printArea{display:none}
+.pbtn{display:inline-flex;align-items:center;gap:6px;font-weight:600;font-size:.85rem;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--accent);padding:6px 10px;cursor:pointer}
+@media print{
+  @page{size:A4 portrait;margin:12mm}
+  html,body{background:#fff!important;color:#000!important}
+  body.print-mode>*:not(#printArea){display:none!important}
+  body.print-mode #printArea{display:block!important}
+  #printArea .noprint,#printArea button,#printArea .pbtn,#printArea input,#printArea select,#printArea summary{display:none!important}
+  #printArea .panel{border:1px solid #bbb;break-inside:avoid;margin:0 0 8mm;background:#fff!important}
+  #printArea .panel.pbreak{break-before:page}
+  #printArea .pmu{break-inside:auto}
+  #printArea .pmu .stack{display:grid!important;grid-template-columns:1fr 1fr;gap:4mm!important}
+  #printArea .pmu .stack>div{break-inside:avoid;font-size:9pt}
+  #printArea .psess{font-size:10pt}
+  #printArea .zone,#printArea [style*="var(--sunk)"]{break-inside:avoid}
+  #printArea *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  #printArea img.pimg{width:100%;max-height:270mm;object-fit:contain;display:block;margin:0 auto}
+  #printArea .phead{display:flex;justify-content:space-between;border-bottom:2px solid #1a7f37;padding-bottom:4px;margin-bottom:6mm;font:600 11pt sans-serif}
+}
 </style>
 
 <div class="rope" aria-hidden="true"></div>
@@ -846,7 +865,7 @@ function viewEntr(){
   const gen=()=>{const css=parseT($('#sc').value); if(!isFinite(css)||css<50){$('#sesOut').innerHTML='<div class="empty"><b>Allure illisible</b>Format : 1:45</div>';return}
     setPref('css_manual',$('#sc').value); setPref('ses_type',$('#st').value); setPref('ses_dur',$('#sd').value); setPref('ses_st',$('#sn').value);
     const r=genSession(css,$('#st').value,+$('#sd').value,$('#sn').value);
-    $('#sesOut').innerHTML=`<div class="panel"><div class="row" style="justify-content:space-between"><h3 style="margin:0">${SETS[$('#st').value].lab} · ${$('#sd').selectedOptions[0].text}</h3><span class="t">${r.vol} m</span></div>
+    $('#sesOut').innerHTML=`<div class="panel"><div class="row" style="justify-content:space-between"><h3 style="margin:0">${SETS[$('#st').value].lab} · ${$('#sd').selectedOptions[0].text}</h3><span class="row" style="gap:8px"><span class="t">${r.vol} m</span>${PBTN('Séance de natation')}</span></div>
     ${r.all.map(g=>`<h3 style="margin:14px 0 6px;font-size:.95rem;color:var(--muted)">${g.h}</h3><div class="stack" style="gap:6px">${g.b.map(b=>{const z=b.z===6?5:b.z;const pace=zonePace(css,b.z);const t=pace/100*b.d;
       return `<div class="zone" style="--zc:var(--z${z});grid-template-columns:minmax(0,1fr) auto"><div class="zt"><b>${b.n>1?b.n+' × ':''}${b.d} m</b><span>${b.txt}${b.z===6?' · sprint max':' · Z'+b.z}</span></div><div class="zp">${b.dep?`départ ${fmtS(b.dep)}<i>${fmt(t,1)} par ${b.d} m</i>`:`<i>≈ ${fmtS(b.n*t+(b.n-1)*(b.r||0))}</i>`}</div></div>`}).join('')}</div>`).join('')}
     <p class="note" style="margin-top:10px">Temps cibles calculés avec votre CSS, départs arrondis aux 5 s. Bassin de 25 m. Adaptez à la forme du jour.</p></div>`};
@@ -1015,7 +1034,7 @@ function buildSession(type,pr,pa,dur){
   return {blocks:B,vol,warm:3};
 }
 function sessionHTML(t,ses,idx){
-  return `<div class="panel" style="background:var(--sunk)"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Séance ${idx+1} · ${SESS_LAB[t]}</h3><span class="t">${ses.vol} m</span></div>
+  return `<div class="panel psess" style="background:var(--sunk)"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Séance ${idx+1} · ${SESS_LAB[t]}</h3><span class="row" style="gap:8px"><span class="t">${ses.vol} m</span>${PBTN('Séance de natation')}</span></div>
   <div class="stack" style="gap:6px;margin-top:8px">${ses.blocks.map((b,i)=>{const z=b.z===6?5:b.z;const head=i<ses.warm?'Éch.':i===ses.blocks.length-1?'Fin':'';
     return `<div class="zone" style="--zc:var(--z${z});grid-template-columns:minmax(0,1fr) auto;background:var(--surface)"><div class="zt"><b>${head?`<span class="muted" style="font-weight:400">${head} · </span>`:''}${b.n>1?b.n+' × ':''}${b.d} m</b><span>${esc(b.txt)}${b.z===6?' · sprint':b.z>1?' · Z'+b.z:''}</span></div><div class="zp">${b.t?`${fmt(b.t,1)}${b.n>1?`<i>départ ${fmtS(b.dep)}</i>`:''}`:(b.n>1&&b.rest?`<i>récup ${b.rest} s</i>`:'<i>souple</i>')}</div></div>`}).join('')}</div></div>`;
 }
@@ -1031,6 +1050,7 @@ function viewProg(id){
     <div class="kpis"><div class="kpi"><div class="v">${pr.sess}</div><div class="l">Séances / sem.</div></div><div class="kpi"><div class="v">${(tot/1000).toFixed(1)} km</div><div class="l">Volume semaine</div></div><div class="kpi"><div class="v">${fmt(pa.css)}</div><div class="l">CSS /100</div></div>${ph.weeks!=null?`<div class="kpi"><div class="v">${ph.weeks}</div><div class="l">Semaines avant compét.</div></div>`:''}</div>
     <div class="hint" style="margin-top:12px"><span><b>${ph.lab}</b>${ph.comp?` vers « ${esc(ph.comp.t)} » (${fdate(ph.comp.d)})`:''}. ${ph.key==='foncier'?'Priorité au volume aérobie, au seuil et à la technique.':ph.key==='spec'?'Priorité aux allures de course de votre épreuve et à la tolérance lactique.':'Volume réduit d’environ 25 %, intensité maintenue : arriver frais.'} Objectif : ${EVL[pr.ev]}.</span></div>
     <div class="row" style="margin-top:10px"><button class="btn ghost" data-go="prof-${id}">Modifier spécialité, objectif, séances</button></div></div>
+  <div class="row noprint" style="justify-content:flex-end">${PBTN('Programme natation de la semaine','data-printall=".psess"')}<span class="small muted">toutes les séances</span></div>
   ${sess.map(([t,x],i)=>sessionHTML(t,x,i)).join('')}
   <p class="note">Temps cibles calculés à partir des meilleurs temps de ${esc(s.prenom)} (CSS ${pa.cssSrc}). Départs arrondis aux 5 s, bassin de 25 m. Le programme se recalcule chaque semaine en fonction de la date de la compétition. À adapter avec l’entraîneur et selon la forme du jour.</p></div>`;
   wire();
@@ -1164,7 +1184,7 @@ function viewNutri(id){
       <div class="kpi"><div class="v">${T.C} g</div><div class="l">Glucides (${(T.C/b.kg).toFixed(1)} g/kg)</div></div><div class="kpi"><div class="v">${T.F} g</div><div class="l">Lipides</div></div>
       <div class="kpi"><div class="v">${((n.water+(dt==='rest'?0:n.waterSes))/1000).toFixed(1)} L</div><div class="l">Eau${dt==='rest'?'':` dont ${n.waterSes} ml pendant la séance`}</div></div></div></div>
 
-  <div class="panel"><h3>Ma journée type (${dt==='train'?'entraînement':dt==='rest'?'repos':'compétition'})</h3>
+  <div class="panel"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Ma journée type (${dt==='train'?'entraînement':dt==='rest'?'repos':'compétition'})</h3>${PBTN('Journée alimentaire')}</div><div style="height:8px"></div>
     <div class="stack" style="gap:10px">${plan.meals.map(m=>`<div style="background:var(--sunk);border-radius:8px;padding:10px 12px"><div class="row" style="justify-content:space-between"><b>${m.lab}</b><span class="small muted t">${Math.round(m.kc)} kcal · P ${Math.round(m.P)} · G ${Math.round(m.C)} · L ${Math.round(m.F)}</span></div>
       <ul style="margin:6px 0 0;padding-left:18px">${m.items.map(([f,g])=>`<li><b class="t">${gTxt(f,g)}</b> ${FOOD[f][0]}</li>`).join('')}</ul></div>`).join('')}</div>
     <p class="note" style="margin-top:10px">Total : ${Math.round(plan.tot[0])} kcal · ${Math.round(plan.tot[1])} g de protéines · ${Math.round(plan.tot[2])} g de glucides · ${Math.round(plan.tot[3])} g de lipides. Les aliments sont interchangeables à poids égal dans la même famille (pâtes ↔ riz ↔ semoule ; poulet ↔ poisson ↔ œufs).</p></div>
@@ -1333,8 +1353,9 @@ function viewMuscu(id){
         <label for="m_d">Durée${selHTML('m_d',[[20,'20 min'],[30,'30 min'],[45,'45 min']],mu.dur,'Durée')}</label>
         <div class="wide"><div class="small muted" style="font-weight:600;margin-bottom:4px">Zones sensibles à ménager</div><div class="row">${[['epaule','Épaules'],['genou','Genoux'],['dos','Bas du dos']].map(([k,l])=>`<label class="chip-f" style="display:inline-flex;gap:6px;align-items:center"><input type="checkbox" data-se="${k}"${mu.sens.includes(k)?' checked':''} style="padding:0;width:auto"> ${l}</label>`).join('')}</div></div>
         <div class="wide row"><button class="btn" id="m_ok">Mettre à jour mon programme</button></div></div></details></div>
-  <div class="panel"><h3>Échauffement (5 min)</h3><ul class="obs"><li>Moulinets de bras avant et arrière, 20 de chaque.</li><li>Rotations externes à l’élastique très léger, 15.</li><li>10 squats lents et 10 fentes alternées sans charge.</li></ul></div>
-  ${M.sessions.map((L,i)=>`<div class="panel"><h3>Séance ${String.fromCharCode(65+i)}${M.sessions.length>1?` · ${['lundi ou mardi','jeudi','samedi'][i]||''}`:''}</h3><div class="stack" style="gap:12px">
+  <div class="panel pmu"><h3>Échauffement (5 min)</h3><ul class="obs"><li>Moulinets de bras avant et arrière, 20 de chaque.</li><li>Rotations externes à l’élastique très léger, 15.</li><li>10 squats lents et 10 fentes alternées sans charge.</li></ul></div>
+  <div class="row noprint" style="justify-content:flex-end">${PBTN('Programme de musculation','data-printall=".pmu"')}<span class="small muted">échauffement + toutes les séances</span></div>
+  ${M.sessions.map((L,i)=>`<div class="panel pmu"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Séance ${String.fromCharCode(65+i)}${M.sessions.length>1?` · ${['lundi ou mardi','jeudi','samedi'][i]||''}`:''}</h3>${PBTN('Séance de musculation')}</div><div style="height:8px"></div><div class="stack" style="gap:12px">
     ${L.map((k,j)=>{const e=EXO[k],d=M.dose(k);return `<div style="background:var(--sunk);border-radius:10px;padding:10px 12px">
       <span class="muted small">${j+1}. ${CAT_LAB[e.cat]}</span><div style="font-weight:600">${e.n}</div><div class="small" style="margin-top:2px"><b class="t">${d.s} × ${d.r}</b> <span class="muted">· récupération ${d.rec}</span></div>
       ${exoSVG(k)}
@@ -1515,11 +1536,29 @@ function stretchHTML(){
     ${chipsHTML([['0','Routine A'],['1','Routine B']],String(cur),'data-str')}
     <h3 style="font-size:.95rem;margin:12px 0 6px">${R.t}</h3>
     <a href="${R.img}" target="_blank" rel="noopener" aria-label="Agrandir la fiche"><img src="${R.img}" alt="${esc(R.t)} : 8 exercices illustrés" loading="lazy" style="width:100%;height:auto;border-radius:10px;border:1px solid var(--line);display:block"></a>
-    <p class="small muted" style="margin:6px 0 0">Touchez l’image pour l’agrandir.</p>
+    <div class="row" style="margin-top:8px;justify-content:space-between"><span class="small muted">Touchez l’image pour l’agrandir.</span>${PBTN('Étirements','data-printimg="'+R.img+'"')}</div>
     <details style="margin-top:10px"><summary style="cursor:pointer;font-weight:600;color:var(--accent)">Liste des exercices</summary><ol style="margin:8px 0 0;padding-left:20px;display:flex;flex-direction:column;gap:6px">${R.ex.map(([n,d])=>`<li><b>${n}</b> : ${d}</li>`).join('')}</ol></details>
     <ul class="obs" style="margin-top:10px"><li>Objectif : relâcher, pas fatiguer. Respirez lentement, tension légère à modérée.</li><li>Aucun mouvement douloureux. Idéal les jours sans natation ni musculation, ou le soir après une séance légère.</li></ul></div>`;
 }
 function wireStretch(id){document.querySelectorAll('[data-str]').forEach(b=>b.onclick=()=>{setPref('str_r',b.dataset.str);const y=window.scrollY;viewForme(id);window.scrollTo(0,y)})}
+
+/* ---------- impression ---------- */
+function doPrint(nodes,title,isImg){
+  let pa=document.getElementById('printArea'); if(!pa){pa=document.createElement('div');pa.id='printArea';document.body.appendChild(pa)}
+  const who=(document.querySelector('#view h2')||{}).innerText||'';
+  pa.innerHTML=isImg?'':`<div class="phead"><span>CN Viry-Châtillon Maîtres · ${esc(title)}</span><span>${esc(who.split('\n')[0])} · ${fdate(today())}</span></div>`;
+  nodes.forEach(n=>{const c=n.cloneNode(true); c.querySelectorAll('details').forEach(d=>d.open=true); pa.appendChild(c)});
+  document.body.classList.add('print-mode');
+  const imgs=[...pa.querySelectorAll('img')]; Promise.all(imgs.map(i=>i.complete?1:new Promise(r=>{i.onload=i.onerror=r}))).then(()=>setTimeout(()=>{window.print()},150));
+}
+window.addEventListener('afterprint',()=>{document.body.classList.remove('print-mode');const pa=document.getElementById('printArea');if(pa)pa.innerHTML=''});
+document.addEventListener('click',e=>{
+  const b=e.target.closest('[data-print],[data-printall],[data-printimg]'); if(!b) return; e.preventDefault();
+  if(b.dataset.printimg!=null){const im=document.createElement('img');im.src=b.dataset.printimg;im.className='pimg';doPrint([im],'Étirements',true);return}
+  if(b.dataset.printall!=null){const L=[...document.querySelectorAll(b.dataset.printall)];L.forEach((n,i)=>n.classList.toggle('pbreak',false));doPrint(L,b.dataset.title||'Programme');return}
+  const p=b.closest('.panel'); if(p) doPrint([p],b.dataset.title||'Séance');
+});
+const PBTN=(t,attr='data-print')=>`<button class="pbtn noprint" ${attr} data-title="${t}" aria-label="Imprimer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V3h12v6M6 18H4a1 1 0 0 1-1-1v-6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6a1 1 0 0 1-1 1h-2"/><rect x="6" y="14" width="12" height="7"/></svg>Imprimer</button>`;
 
 /* ---------- installation (PWA) ---------- */
 let deferredPrompt=null; window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;document.querySelectorAll('[data-install]').forEach(b=>b.hidden=false)});
