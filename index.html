@@ -529,12 +529,12 @@ const pref=(k,d)=>ls.get('p_'+k)||d, setPref=(k,v)=>ls.set('p_'+k,v);
 async function copyText(t,el){try{await navigator.clipboard.writeText(t);if(el)el.textContent='Lien copié.'}catch(e){if(el)el.innerHTML=`Copiez ce lien : <input value="${esc(t)}" readonly style="width:100%;margin-top:4px" onfocus="this.select()">`}}
 
 /* ---------- Onglet Club ---------- */
-const CLUB_TABS=[['qualifs','Qualifiés'],['records','Records'],['class','Classements'],['actus','Actualités'],['relais','Relais'],['ic','Interclubs'],['cal','Calendrier'],['grilles','Grilles'],['liens','Liens']];
+const CLUB_TABS=[['qualifs','Qualifiés'],['cap','Capitaine'],['records','Records'],['class','Classements'],['actus','Actualités'],['relais','Relais'],['ic','Interclubs'],['cal','Calendrier'],['grilles','Grilles'],['liens','Liens']];
 function viewClub(sub){
   sub=CLUB_TABS.some(t=>t[0]===sub)?sub:pref('club','qualifs'); setPref('club',sub);
   $('#view').innerHTML=`<div class="stack"><div class="sticky-search">${chipsHTML(CLUB_TABS,sub,'data-cs')}</div><div id="clubBody" class="stack"></div></div>`;
   document.querySelectorAll('[data-cs]').forEach(b=>b.onclick=()=>go('club-'+b.dataset.cs));
-  ({qualifs:clubQualifs,records:clubRecords,class:clubClass,actus:clubActus,relais:clubRelais,ic:clubIC,cal:clubCal,grilles:clubGrilles,liens:clubLiens})[sub]();
+  ({qualifs:clubQualifs,cap:viewCaptain,records:clubRecords,class:clubClass,actus:clubActus,relais:clubRelais,ic:clubIC,cal:clubCal,grilles:clubGrilles,liens:clubLiens})[sub]();
   wire();
 }
 function clubQualifs(){
@@ -1600,6 +1600,102 @@ function wireBodyFiche(s){
     Object.assign(o,{kg,cm,goal:$('#fb_goal').value,log:log.slice(-60)}); saveBody(s,o);
     const y=window.scrollY; viewFiche(s.id); window.scrollTo(0,y); const m=$('#fb_msg'); if(m) m.textContent='Enregistré ✓'};
 }
+/* ================= CAPITAINE : composition d'équipes ================= */
+const CAP_RELAYS=[['4x50NL','4 × 50 NL',50,'NL'],['4x50_4N','4 × 50 4 nages',50,'4N'],['4x100NL','4 × 100 NL',100,'NL'],['4x100_4N','4 × 100 4 nages',100,'4N'],['4x200NL','4 × 200 NL',200,'NL']];
+const ORDER4=['D','B','P','NL'], ST_LAB={D:'Dos',B:'Brasse',P:'Papillon',NL:'Nage libre'};
+const PERMS4=(()=>{const r=[];const f=(a,p)=>{if(!a.length){r.push(p);return}a.forEach((x,i)=>f(a.filter((_,j)=>j!==i),[...p,x]))};f([0,1,2,3],[]);return r})();
+function capPresent(){try{const a=JSON.parse(ls.get('cap_present')||'null');return a?new Set(a.filter(id=>S.sw[id])):null}catch(e){return null}}
+function capPool(){const p=capPresent();return swList().filter(s=>catOf(s.annee)&&(!p||p.has(s.id)))}
+function capBest(s,ev,pool,from){let b=null;for(const p of perfsOf(s.id)){if(p.ev!==ev||+p.pool!==+pool||!p.pts||(from&&p.date<from))continue;if(!b||p.pts>b.pts)b=p}return b}
+/* candidats d'un relais : chaque nageur avec sa meilleure perf (points FFN, coefficient d'âge inclus) sur la distance du relais */
+function capCands(sw,dist,kind,pool,from){
+  return sw.map(s=>{const t={};for(const st of (kind==='NL'?['NL']:ORDER4)){const b=capBest(s,dist+st,pool,from);if(b)t[st]=b}return Object.keys(t).length?{s,age:ageAt(s),t}:null}).filter(Boolean);
+}
+function capEvalQuad(Q,kind){
+  if(kind==='NL'){if(Q.some(c=>!c.t.NL))return null;const legs=Q.map(c=>({c,st:'NL',p:c.t.NL})).sort((a,b)=>a.p.t-b.p.t);return {legs,pts:legs.reduce((x,l)=>x+l.p.pts,0),time:legs.reduce((x,l)=>x+l.p.t,0)}}
+  let best=null;for(const pm of PERMS4){let pts=0,time=0,legs=[];for(let i=0;i<4;i++){const c=Q[pm[i]],p=c.t[ORDER4[i]];if(!p){pts=-1;break}pts+=p.pts;time+=p.t;legs.push({c,st:ORDER4[i],p})}if(pts>=0&&(!best||pts>best.pts))best={legs,pts,time}}return best;
+}
+function capQuads(cands,gender,kind){
+  const top=(arr,n)=>arr.slice().sort((a,b)=>Math.max(...Object.values(b.t).map(p=>p.pts))-Math.max(...Object.values(a.t).map(p=>p.pts))).slice(0,n);
+  const out=[]; const add=Q=>{const e=capEvalQuad(Q,kind);if(!e)return;const sum=Q.reduce((x,c)=>x+c.age,0),rc=rcatOf(sum);if(!rc)return;out.push({...e,sum,rc,ids:Q.map(c=>c.s.id)})};
+  if(gender==='X'){const F=top(cands.filter(c=>c.s.sexe==='F'),12),M=top(cands.filter(c=>c.s.sexe==='M'),12);
+    for(let a=0;a<F.length;a++)for(let b=a+1;b<F.length;b++)for(let d=0;d<M.length;d++)for(let e=d+1;e<M.length;e++)add([F[a],F[b],M[d],M[e]])}
+  else{const C=top(cands.filter(c=>c.s.sexe===gender),kind==='NL'?22:18),n=C.length;
+    for(let a=0;a<n;a++)for(let b=a+1;b<n;b++)for(let d=b+1;d<n;d++)for(let e=d+1;e<n;e++)add([C[a],C[b],C[d],C[e]])}
+  return out;
+}
+/* choix des équipes : nageurs différents, au plus une équipe par catégorie (option), maximum de points au total */
+function capSolve(quads,onePerCat,maxTeams){
+  if(!onePerCat){const used=new Set(),teams=[];for(const q of quads.slice().sort((a,b)=>b.pts-a.pts)){if(teams.length>=maxTeams)break;if(q.ids.some(i=>used.has(i)))continue;q.ids.forEach(i=>used.add(i));teams.push(q)}return teams}
+  const byCat={};for(const q of quads)(byCat[q.rc]=byCat[q.rc]||[]).push(q);
+  const cats=Object.keys(byCat);cats.forEach(k=>byCat[k]=byCat[k].sort((a,b)=>b.pts-a.pts).slice(0,60));
+  cats.sort((a,b)=>byCat[b][0].pts-byCat[a][0].pts);
+  const ub=cats.map((k,i)=>cats.slice(i).reduce((t,c)=>t+byCat[c][0].pts,0));
+  let best={pts:-1,teams:[]};const used=new Set();let steps=0;
+  const dfs=(i,acc,teams)=>{if(++steps>200000)return;if(acc>best.pts){best={pts:acc,teams:teams.slice()}}if(i>=cats.length||teams.length>=maxTeams)return;if(acc+ub[i]<=best.pts)return;
+    for(const q of byCat[cats[i]]){if(q.ids.some(x=>used.has(x)))continue;q.ids.forEach(x=>used.add(x));teams.push(q);dfs(i+1,acc+q.pts,teams);teams.pop();q.ids.forEach(x=>used.delete(x))}
+    dfs(i+1,acc,teams)};
+  dfs(0,0,[]);return best.teams.sort((a,b)=>RCATS.findIndex(r=>r[0]===a.rc)-RCATS.findIndex(r=>r[0]===b.rc));
+}
+function capShareText(title,teams){return `${title}\n`+teams.map((t,i)=>`\n${t.label||('Équipe '+(i+1))} · ${t.rc||''} · ${t.pts} pts${t.time?' · '+fmt(t.time):''}\n`+t.legs.map(l=>`- ${l.st&&l.st!=='NL'||l.ev?(l.ev?EVL[l.ev]:ST_LAB[l.st])+' : ':''}${swName(l.c?l.c.s:l.s)}${l.p?' ('+fmt(l.p.t)+', '+l.p.pts+' pts)':''}`).join('\n')).join('\n')}
+function viewCaptain(){
+  const mode=pref('cap_mode','relais'), P=capPresent(), all=swList().filter(s=>catOf(s.annee));
+  const nP=P?all.filter(s=>P.has(s.id)).length:all.length;
+  const rel=pref('cap_rel','4x50NL'), g=pref('cap_g','X'), pool=+pref('cap_pool',25), win=pref('cap_win','2'), one=pref('cap_one','1')==='1', maxT=+pref('cap_max',8);
+  $('#clubBody').innerHTML=`<div class="panel"><h2>Capitaine</h2><p class="small muted" style="margin-top:0">Composez les équipes qui rapportent le plus de points FFN avec les nageurs présents : relais par sexe ou mixtes selon les catégories d’âge, ou équipes Interclubs.</p>
+    <details${P?'':' open'}><summary style="cursor:pointer;font-weight:600;color:var(--accent)">Nageurs présents : ${nP} / ${all.length}</summary>
+      <div class="row" style="margin:8px 0"><input type="search" id="cap_q" placeholder="Filtrer" style="flex:1"><button class="pbtn" id="cap_all">Tous</button><button class="pbtn" id="cap_none">Aucun</button></div>
+      <div id="cap_list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:4px 10px;max-height:300px;overflow:auto">${all.map(s=>`<label class="small" data-n="${esc(norm(swName(s)))}" style="display:flex;gap:6px;align-items:center;padding:4px 0"><input type="checkbox" data-cp="${s.id}"${!P||P.has(s.id)?' checked':''} style="padding:0;width:auto"> ${esc(s.prenom)} ${esc(s.nom)} <span class="muted">${s.sexe==='F'?'D':'H'} ${ageAt(s)}</span></label>`).join('')}</div></details>
+    <div style="margin-top:12px">${chipsHTML([['relais','Relais'],['ic','Interclubs']],mode,'data-cm')}</div>
+    ${mode==='relais'?`<div class="form" style="margin-top:10px">
+      <label for="cap_rel">Relais${selHTML('cap_rel',CAP_RELAYS.map(r=>[r[0],r[1]]),rel,'Relais')}</label>
+      <label for="cap_g">Équipes${selHTML('cap_g',[['X','Mixtes (2 D + 2 H)'],['F','Dames'],['M','Messieurs']],g,'Genre')}</label>
+      <label for="cap_pool">Temps de référence${selHTML('cap_pool',[[25,'Bassin 25 m'],[50,'Bassin 50 m']],pool,'Bassin')}</label>
+      <label for="cap_win">Période${selHTML('cap_win',[['2',`Depuis ${REF_YEAR-2}`],['all','Tous les temps']],win,'Période')}</label>
+      <label for="cap_one" class="wide">Règle${selHTML('cap_one',[['1','Une équipe maximum par catégorie (France relais, la plupart des meetings)'],['0','Plusieurs équipes par catégorie autorisées']],one?'1':'0','Règle')}</label>
+      <label for="cap_max">Nombre d’équipes max${selHTML('cap_max',[[1,'1'],[2,'2'],[3,'3'],[4,'4'],[6,'6'],[8,'8']],maxT,'Nombre')}</label></div>`
+    :`<p class="small" style="margin:10px 0 0">Règle FFN Interclubs Maîtres : équipes de 10 nageurs (au moins 2 dames et 2 messieurs), une épreuve individuelle chacun, points FFN avec coefficient d’âge.</p>`}
+    <div class="row" style="margin-top:12px"><button class="btn" id="cap_go">Composer les équipes</button></div></div>
+  <div id="cap_out"></div>`;
+  const saveP=()=>{const ids=[...document.querySelectorAll('[data-cp]')].filter(x=>x.checked).map(x=>x.dataset.cp);ls.set('cap_present',JSON.stringify(ids));const sm=document.querySelector('#clubBody details summary');if(sm)sm.textContent=`Nageurs présents : ${ids.length} / ${all.length}`};
+  document.querySelectorAll('[data-cp]').forEach(x=>x.onchange=saveP);
+  $('#cap_all').onclick=()=>{document.querySelectorAll('[data-cp]').forEach(x=>x.checked=true);saveP()};
+  $('#cap_none').onclick=()=>{document.querySelectorAll('[data-cp]').forEach(x=>x.checked=false);saveP()};
+  $('#cap_q').oninput=e=>{const q=norm(e.target.value);document.querySelectorAll('#cap_list label').forEach(l=>l.style.display=l.dataset.n.includes(q)?'':'none')};
+  document.querySelectorAll('[data-cm]').forEach(b=>b.onclick=()=>{setPref('cap_mode',b.dataset.cm);viewCaptain();wire()});
+  for(const [id,k] of [['cap_rel','cap_rel'],['cap_g','cap_g'],['cap_pool','cap_pool'],['cap_win','cap_win'],['cap_one','cap_one'],['cap_max','cap_max']]){const el=$('#'+id);if(el)el.onchange=e=>setPref(k,e.target.value)}
+  $('#cap_go').onclick=()=>{$('#cap_out').innerHTML='<div class="panel"><p class="muted">Calcul des meilleures combinaisons…</p></div>';setTimeout(()=>{(pref('cap_mode','relais')==='relais'?capRunRelay:capRunIC)();wire()},30)};
+}
+function capTeamsHTML(title,teams,note){
+  if(!teams.length) return `<div class="panel"><div class="empty"><b>Aucune équipe possible</b>Pas assez de nageurs présents avec un temps sur ces épreuves (vérifiez le sexe, le bassin et la période).</div></div>`;
+  const tot=teams.reduce((t,x)=>t+x.pts,0);
+  window.__capShare=capShareText(title,teams);
+  return `<div class="panel pcap"><div class="row" style="justify-content:space-between"><h3 style="margin:0">${esc(title)}</h3><span class="row" style="gap:8px"><span class="t" style="color:var(--accent);font-size:1.1rem">${tot} pts</span>${PBTN('Équipes',`data-printall=".pcap"`)}<button class="pbtn noprint" id="cap_share">Partager</button></span></div>
+    <p class="small muted" style="margin:4px 0 0">${teams.length} équipe${teams.length>1?'s':''} · ${note}</p></div>
+    ${teams.map((t,i)=>`<div class="panel pcap" style="background:var(--sunk)"><div class="row" style="justify-content:space-between"><h3 style="margin:0">${t.label||('Équipe '+(i+1))}${t.rc?` · ${t.rc} <span class="small muted" style="font-weight:400">${t.sum} ans</span>`:''}</h3><span class="t">${t.pts} pts${t.time?` · ${fmt(t.time)}`:''}</span></div>
+      <div style="display:flex;flex-direction:column;margin-top:6px">${t.legs.map((l,j)=>{const s=l.c?l.c.s:l.s;return `<div style="display:grid;grid-template-columns:${l.ev?'64px':(t.kind==='4N'?'52px':'22px')} minmax(0,1fr);gap:2px 8px;align-items:center;padding:7px 0;border-top:1px solid var(--line)"><span class="small muted" style="grid-row:1/3">${l.ev?EVL[l.ev]:(t.kind==='4N'?ST_LAB[l.st]:(j+1)+'.')}</span><span style="min-width:0"><button class="tlink" data-sw="${s.id}">${esc(swName(s))}</button></span><span class="small muted">${s.sexe==='F'?'Dame':'Homme'} · ${ageAt(s)} ans${l.p?` · <span class="t" style="color:var(--ink)">${fmt(l.p.t)}</span> · ${l.p.pts} pts`:''}</span></div>`}).join('')}</div></div>`).join('')}`;
+}
+function wireCapOut(){
+  document.querySelectorAll('#cap_out [data-sw]').forEach(b=>b.onclick=()=>go('s'+b.dataset.sw));
+  const sh=$('#cap_share'); if(sh) sh.onclick=async()=>{const t=window.__capShare||'';try{if(navigator.share){await navigator.share({title:'Équipes',text:t});return}}catch(e){}copyText(t);sh.textContent='Copié ✓'};
+}
+function capRunRelay(){
+  const rel=CAP_RELAYS.find(r=>r[0]===pref('cap_rel','4x50NL')), g=pref('cap_g','X'), pool=+pref('cap_pool',25), from=pref('cap_win','2')==='2'?WIN_FROM:'', one=pref('cap_one','1')==='1', maxT=+pref('cap_max',8);
+  const cands=capCands(capPool(),rel[2],rel[3],pool,from); const quads=capQuads(cands,g,rel[3]);
+  const teams=capSolve(quads,one,maxT).map(t=>({...t,kind:rel[3],pts:Math.round(t.pts)}));
+  const gl={X:'mixtes',F:'dames',M:'messieurs'}[g];
+  $('#cap_out').innerHTML=capTeamsHTML(`${rel[1]} ${gl}`,teams,`${one?'une équipe par catégorie d’âge':'catégories libres'} · points FFN des meilleurs ${rel[2]} m individuels (coefficient d’âge inclus), bassin ${pool} m${from?' depuis '+(REF_YEAR-2):''}.`)
+   +`<p class="note">${rel[3]==='4N'?'Ordre du 4 nages : dos, brasse, papillon, nage libre. Chaque nageur est placé sur la nage où il rapporte le plus pour l’équipe. ':''}Catégorie = somme des âges au 31/12/${REF_YEAR} (R1 100–119 ans … R8 360 ans et plus). Temps estimé = somme des meilleurs temps individuels ; les départs lancés font gagner 0,5 à 1 s par relayeur. Les points réels du relais dépendent du temps réalisé : ce calcul classe les combinaisons au plus juste avec les données disponibles.</p>`;
+  wireCapOut();
+}
+function capRunIC(){
+  const P=capPresent(); const ex=new Set(P?swList().filter(s=>!P.has(s.id)).map(s=>s.id):[]); const teams=[];
+  for(let k=1;k<=3;k++){const r=icTeam(ex);if(!r)break;r.team.forEach(x=>ex.add(x.s.id));teams.push({label:'Équipe '+k,pts:r.tot,legs:r.team.map(x=>({ev:x.ev,s:x.s,p:x.p}))})}
+  $('#cap_out').innerHTML=capTeamsHTML('Interclubs Maîtres',teams,'répartition optimale (algorithme d’affectation) des 10 épreuves, points FFN 25 m depuis '+(REF_YEAR-2)+'.')
+   +`<p class="note">Les relais 10 × 50 NL et 4 × 50 4N mixte s’ajoutent au total réel : composez-les avec le mode Relais. Un nageur sans temps sur une épreuve n’y est pas proposé.</p>`;
+  wireCapOut();
+}
+
 
 /* ---------- installation (PWA) ---------- */
 let deferredPrompt=null; window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;document.querySelectorAll('[data-install]').forEach(b=>b.hidden=false)});
