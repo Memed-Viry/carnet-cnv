@@ -1725,14 +1725,26 @@ function galResize(file,max=1600,q=0.82){return new Promise((ok,ko)=>{const img=
 async function galUpload(files){
   const msg=$('#gal_msg'), album=($('#gal_album').value||'').trim().slice(0,60), cap=($('#gal_cap').value||'').trim().slice(0,120), who=me()&&S.sw[me()]?swName(S.sw[me()]):'';
   if(album) setPref('gal_album',album);
-  let n=0; for(const f of files){ if(!/^image\//.test(f.type)&&!/\.(heic|heif|jpe?g|png|webp)$/i.test(f.name)) continue; n++;
-    msg.textContent=`Envoi ${n} / ${files.length}…`;
-    try{const blob=await galResize(f); const fd=new FormData(); fd.append('file',blob,'photo.jpg'); fd.append('upload_preset',CLD_PRESET); fd.append('tags',CLD_TAG);
-      const ctx=[album&&('album='+album.replace(/[|=]/g,' ')),cap&&('caption='+cap.replace(/[|=]/g,' ')),who&&('auteur='+who.replace(/[|=]/g,' '))].filter(Boolean).join('|'); if(ctx) fd.append('context',ctx);
-      const r=await fetch(`https://api.cloudinary.com/v1_1/${CLD_CLOUD}/image/upload`,{method:'POST',body:fd}); const j=await r.json(); if(!r.ok) throw new Error(j.error&&j.error.message||r.status);
-      GAL=[{...j,context:{custom:{album,caption:cap,auteur:who}}},...(GAL||[])]; if(j.delete_token){try{const t=JSON.parse(ls.get('gal_tok')||'{}');t[j.public_id]=[j.delete_token,Date.now()];ls.set('gal_tok',JSON.stringify(t))}catch(e){}}
-    }catch(e){msg.textContent='Échec de l’envoi : '+e.message;return}}
-  msg.textContent=n?`${n} photo${n>1?'s':''} ajoutée${n>1?'s':''} ✓ (visible par tous d’ici une minute)`:'Aucune image reconnue.'; $('#gal_cap').value=''; galGrid();
+  const imgs=files.filter(f=>/^image\//.test(f.type)||/\.(heic|heif|jpe?g|png|webp)$/i.test(f.name));
+  let ok=0, ko=0, lastErr='';
+  for(let n=0;n<imgs.length;n++){ const f=imgs[n];
+    msg.textContent=`Envoi ${n+1} / ${imgs.length}… (gardez l’appli ouverte)`;
+    let blob=f; try{blob=await galResize(f)}catch(e){}
+    if(blob.size>10e6){ko++;lastErr='photo trop lourde (plus de 10 Mo) et non convertible';continue}
+    const ctx=[album&&('album='+album.replace(/[|=]/g,' ')),cap&&('caption='+cap.replace(/[|=]/g,' ')),who&&('auteur='+who.replace(/[|=]/g,' '))].filter(Boolean).join('|');
+    let done=false;
+    for(let a=0;a<3&&!done;a++){
+      try{const fd=new FormData(); fd.append('file',blob,blob===f?(f.name||'photo.jpg'):'photo.jpg'); fd.append('upload_preset',CLD_PRESET); fd.append('tags',CLD_TAG); if(ctx) fd.append('context',ctx);
+        const r=await fetch(`https://api.cloudinary.com/v1_1/${CLD_CLOUD}/image/upload`,{method:'POST',body:fd}); const j=await r.json().catch(()=>({})); if(!r.ok) throw new Error((j.error&&j.error.message)||('erreur '+r.status));
+        GAL=[{...j,context:{custom:{album,caption:cap,auteur:who}}},...(GAL||[])]; done=true; ok++;
+      }catch(e){lastErr=e.message||String(e); if(/preset|not allowed|whitelisted|Invalid/i.test(lastErr)) break; await new Promise(r=>setTimeout(r,1500*(a+1)))}
+    }
+    if(!done) ko++;
+    if(ok&&(ok%5===0)) galGrid();
+  }
+  const net=/fetch|load failed|network|réseau/i.test(lastErr);
+  msg.innerHTML=(ok?`${ok} photo${ok>1?'s':''} ajoutée${ok>1?'s':''} ✓ (visibles par tous d’ici une minute). `:'')+(ko?`<span style="color:var(--rope)">${ko} échec${ko>1?'s':''} : ${esc(lastErr)}.${net?' Vérifiez la connexion et utilisez l’appli du site du club (pas la copie dans Claude), puis réessayez les photos manquantes.':''}</span>`:'')+(!ok&&!ko?'Aucune image reconnue.':'');
+  $('#gal_cap').value=''; galGrid(); setTimeout(()=>galLoad().then(galGrid),4000);
 }
 function galGrid(){
   const el=$('#gal_grid'); if(!el) return; const f=pref('gal_f','all');

@@ -1,5 +1,5 @@
-// Carnet du Club : fonctionnement hors connexion. Version 202611022218
-const C='carnet-202611022218';
+// Carnet du Club : fonctionnement hors connexion. Version 202611022241
+const C='carnet-202611022241';
 const CORE=['./','index.html','manifest.webmanifest','icon-192.png','icon-512.png','icon-maskable-512.png','apple-touch-icon.png','favicon-32.png','etirements-1.jpg','etirements-2.jpg'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(C).then(c=>c.addAll(CORE)));self.skipWaiting()});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==C).map(x=>caches.delete(x)))));self.clients.claim()});
