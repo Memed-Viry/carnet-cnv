@@ -1708,12 +1708,14 @@ const CLD_CLOUD='';   // nom du « cloud » Cloudinary du club
 const CLD_PRESET='';  // nom du preset d'envoi « unsigned »
 const CLD_TAG='carnetcnv';
 const cldUrl=(r,tr)=>`https://res.cloudinary.com/${CLD_CLOUD}/image/upload/${tr}/v${r.version}/${r.public_id}.${r.format==='heic'?'jpg':r.format}`;
-let GAL=null, GAL_ERR='';
+let GAL=null, GAL_ERR='', GAL_DEL=new Set();
 async function galLoad(){
   try{const res=await fetch(`https://res.cloudinary.com/${CLD_CLOUD}/image/list/${CLD_TAG}.json?t=${Date.now()}`,{cache:'no-store'});
     if(res.status===404){GAL=[];GAL_ERR='';return}
     if(!res.ok) throw new Error('HTTP '+res.status);
-    const j=await res.json(); GAL=(j.resources||[]).sort((a,b)=>a.created_at<b.created_at?1:-1); GAL_ERR='';
+    const j=await res.json(); let del=new Set();
+    try{const rd=await fetch(`https://res.cloudinary.com/${CLD_CLOUD}/image/list/${CLD_TAG}_del.json?t=${Date.now()}`,{cache:'no-store'}); if(rd.ok){const jd=await rd.json(); del=new Set((jd.resources||[]).map(r=>r.context&&r.context.custom&&r.context.custom.del).filter(Boolean))}}catch(e){}
+    GAL_DEL=del; GAL=(j.resources||[]).filter(r=>!del.has(r.public_id)).sort((a,b)=>a.created_at<b.created_at?1:-1); GAL_ERR='';
   }catch(e){GAL_ERR='Impossible de charger les photos (réseau ?).'; if(!GAL) GAL=[]}
 }
 function galResize(file,max=1600,q=0.82){return new Promise((ok,ko)=>{const img=new Image();const u=URL.createObjectURL(file);
@@ -1725,10 +1727,10 @@ async function galUpload(files){
   if(album) setPref('gal_album',album);
   let n=0; for(const f of files){ if(!/^image\//.test(f.type)&&!/\.(heic|heif|jpe?g|png|webp)$/i.test(f.name)) continue; n++;
     msg.textContent=`Envoi ${n} / ${files.length}…`;
-    try{const blob=await galResize(f); const fd=new FormData(); fd.append('file',blob,'photo.jpg'); fd.append('upload_preset',CLD_PRESET); fd.append('tags',CLD_TAG);
+    try{const blob=await galResize(f); const fd=new FormData(); fd.append('file',blob,'photo.jpg'); fd.append('upload_preset',CLD_PRESET); fd.append('tags',CLD_TAG); fd.append('return_delete_token','true');
       const ctx=[album&&('album='+album.replace(/[|=]/g,' ')),cap&&('caption='+cap.replace(/[|=]/g,' ')),who&&('auteur='+who.replace(/[|=]/g,' '))].filter(Boolean).join('|'); if(ctx) fd.append('context',ctx);
       const r=await fetch(`https://api.cloudinary.com/v1_1/${CLD_CLOUD}/image/upload`,{method:'POST',body:fd}); const j=await r.json(); if(!r.ok) throw new Error(j.error&&j.error.message||r.status);
-      GAL=[{...j,context:{custom:{album,caption:cap,auteur:who}}},...(GAL||[])];
+      GAL=[{...j,context:{custom:{album,caption:cap,auteur:who}}},...(GAL||[])]; if(j.delete_token){try{const t=JSON.parse(ls.get('gal_tok')||'{}');t[j.public_id]=[j.delete_token,Date.now()];ls.set('gal_tok',JSON.stringify(t))}catch(e){}}
     }catch(e){msg.textContent='Échec de l’envoi : '+e.message;return}}
   msg.textContent=n?`${n} photo${n>1?'s':''} ajoutée${n>1?'s':''} ✓ (visible par tous d’ici une minute)`:'Aucune image reconnue.'; $('#gal_cap').value=''; galGrid();
 }
@@ -1743,13 +1745,27 @@ function galGrid(){
     :`<div class="empty"><b>Pas encore de photo</b>Prenez ou importez la première photo du club !</div>`);
   document.querySelectorAll('[data-gi]').forEach(b=>b.onclick=()=>galView(+b.dataset.gi));
 }
+
+async function galDelete(i){
+  const r=GAL[i]; if(!r) return; const st=$('#lb_msg'); st.textContent='Suppression…';
+  try{ // 1) marqueur partagé « supprimée » : la photo disparaît pour tous
+    const fd=new FormData(); fd.append('file','data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='); fd.append('upload_preset',CLD_PRESET); fd.append('tags',CLD_TAG+'_del');
+    const who=me()&&S.sw[me()]?swName(S.sw[me()]):''; fd.append('context','del='+r.public_id+(who?'|par='+who.replace(/[|=]/g,' '):''));
+    const x=await fetch(`https://api.cloudinary.com/v1_1/${CLD_CLOUD}/image/upload`,{method:'POST',body:fd}); if(!x.ok){const j=await x.json().catch(()=>({}));throw new Error(j.error&&j.error.message||x.status)}
+    // 2) si la photo vient d'être envoyée depuis ce téléphone (moins de 10 min), suppression définitive
+    try{const t=JSON.parse(ls.get('gal_tok')||'{}'),k=t[r.public_id]; if(k&&Date.now()-k[1]<9.5*60e3){const d=new FormData();d.append('token',k[0]);await fetch(`https://api.cloudinary.com/v1_1/${CLD_CLOUD}/delete_by_token`,{method:'POST',body:d})} delete t[r.public_id]; ls.set('gal_tok',JSON.stringify(t))}catch(e){}
+    GAL_DEL.add(r.public_id); GAL.splice(i,1); $('#gal_lb').style.display='none'; const m=$('#gal_msg'); if(m) m.textContent='Photo supprimée ✓'; galGrid();
+  }catch(e){st.textContent='Échec de la suppression : '+e.message}
+}
 function galView(i){
   const r=GAL[i]; if(!r) return; const c=(r.context&&r.context.custom)||{};
   let lb=$('#gal_lb'); if(!lb){lb=document.createElement('div');lb.id='gal_lb';lb.style.cssText='position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px';document.body.appendChild(lb)}
   lb.innerHTML=`<img src="${cldUrl(r,'c_limit,w_1600,q_auto,f_auto')}" alt="" style="max-width:100%;max-height:78vh;object-fit:contain;border-radius:6px">
     <div style="color:#fff;text-align:center;margin-top:10px;font-size:.9rem">${c.caption?`<b>${esc(c.caption)}</b><br>`:''}${[c.album,c.auteur,r.created_at?fdate(r.created_at.slice(0,10)):''].filter(Boolean).map(esc).join(' · ')}</div>
-    <div class="row" style="margin-top:12px;justify-content:center"><button class="btn ghost" id="lb_p" style="color:#fff;border-color:#fff">‹</button><a class="btn ghost" style="color:#fff;border-color:#fff;text-decoration:none" href="${cldUrl(r,'fl_attachment')}" download>Télécharger</a><button class="btn ghost" id="lb_n" style="color:#fff;border-color:#fff">›</button><button class="btn" id="lb_x">Fermer</button></div>`;
+    <div class="row" style="margin-top:12px;justify-content:center"><button class="btn ghost" id="lb_p" style="color:#fff;border-color:#fff">‹</button><a class="btn ghost" style="color:#fff;border-color:#fff;text-decoration:none" href="${cldUrl(r,'fl_attachment')}" download>Télécharger</a><button class="btn ghost" id="lb_n" style="color:#fff;border-color:#fff">›</button><button class="btn" id="lb_x">Fermer</button></div>
+    <div class="row" style="margin-top:10px;justify-content:center"><button class="btn ghost" id="lb_d" style="color:#ff8a80;border-color:#ff8a80">Supprimer la photo</button></div><p id="lb_msg" style="color:#fff;font-size:.85rem;margin:6px 0 0;text-align:center"></p>`;
   lb.style.display='flex'; $('#lb_x').onclick=()=>lb.style.display='none'; lb.onclick=e=>{if(e.target===lb)lb.style.display='none'};
+  $('#lb_d').onclick=()=>{const b=$('#lb_d'); if(b.dataset.ok){galDelete(i);return} b.dataset.ok='1'; b.textContent='Confirmer la suppression'; $('#lb_msg').textContent='La photo sera retirée pour tous les membres.'};
   $('#lb_p').onclick=()=>galView((i-1+GAL.length)%GAL.length); $('#lb_n').onclick=()=>galView((i+1)%GAL.length);
 }
 function clubPhotos(){
@@ -1761,7 +1777,7 @@ function clubPhotos(){
     <div class="row" style="margin-top:10px"><label class="btn" style="display:inline-flex;gap:6px;align-items:center;cursor:pointer">📷 Prendre une photo<input type="file" accept="image/*" capture="environment" id="gal_cam" hidden></label>
       <label class="btn ghost" style="display:inline-flex;gap:6px;align-items:center;cursor:pointer">🖼 Importer depuis la galerie<input type="file" accept="image/*" multiple id="gal_file" hidden></label></div>
     <p id="gal_msg" class="small muted" style="margin:8px 0 0"></p>
-    <p class="note" style="margin-top:8px">Ne publiez que des photos où les personnes visibles sont d’accord. Pour retirer une photo, demandez au responsable de l’appli.</p></div>
+    <p class="note" style="margin-top:8px">Ne publiez que des photos où les personnes visibles sont d’accord. Chaque membre peut supprimer une photo : ouvrez-la puis « Supprimer la photo ».</p></div>
   <div class="panel"><div id="gal_chips"></div><div id="gal_grid" style="margin-top:8px"></div></div>`;
   for(const id of ['gal_cam','gal_file']) $('#'+id).onchange=e=>{const f=[...e.target.files];e.target.value='';if(f.length) galUpload(f)};
   galGrid(); galLoad().then(galGrid);
