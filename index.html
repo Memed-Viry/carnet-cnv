@@ -1781,6 +1781,7 @@ function galView(i){
   $('#lb_p').onclick=()=>galView((i-1+GAL.length)%GAL.length); $('#lb_n').onclick=()=>galView((i+1)%GAL.length);
 }
 function clubPhotos(){
+  if(!/github\.io$|^localhost$|^$/.test(location.hostname)){$('#clubBody').innerHTML=`<div class="panel"><h2>Galerie photo</h2><div class="empty"><b>Ouvrez l’appli du club pour les photos</b>Cette copie ne peut pas envoyer de photos.<br><a class="btn" style="display:inline-block;margin-top:10px;text-decoration:none" href="https://memed-viry.github.io/carnet-cnv/#club-photos" target="_blank" rel="noopener">Ouvrir la galerie du club</a></div></div>`;return}
   if(!CLD_CLOUD||!CLD_PRESET){$('#clubBody').innerHTML=`<div class="panel"><h2>Galerie photo</h2><div class="empty"><b>Galerie bientôt disponible</b>L’espace de stockage des photos du club est en cours de création.</div></div>`;return}
   const albums=[...new Set(CAL.filter(e=>e.d&&e.d<=today()&&e.d>=new Date(Date.now()-120*864e5).toISOString().slice(0,10)).map(e=>e.t))];
   $('#clubBody').innerHTML=`<div class="panel"><h2>Galerie photo du club</h2><p class="small muted" style="margin-top:0">Les photos ajoutées ici sont visibles par tous les membres.</p>
