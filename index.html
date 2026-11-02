@@ -408,6 +408,9 @@ function progChart(s,ev){
   <div class="legend"><span style="--c:var(--z2)">Bassin 25 m</span><span style="--c:var(--z5)">Bassin 50 m</span><span style="--c:var(--accent)">Grille N1 hiver ${REF_YEAR}</span></div>`;
 }
 
+/* catégorie de l'année civile en cours et changement au 1er janvier */
+const NOWY=()=>new Date().getFullYear();
+function catInfo(s){const a=catOf(s.annee,NOWY()), b=catOf(s.annee,NOWY()+1); return {now:a,next:b,chg:!!(b&&(!a||a.label!==b.label))}}
 /* ---------- vues ---------- */
 let filt='tous', query='', progEv=null; const OPEN=new Set();
 const me=()=>{const id=ls.get('me');return id&&S.sw[id]?id:null};
@@ -433,7 +436,7 @@ function renderList(){
   $('#list').innerHTML=l.length?`<div class="list">${l.map(s=>{const c=catOf(s.annee), x=summary(s);
     return `<button class="item" data-sw="${s.id}"><span class="nm">${esc(s.nom)} ${esc(s.prenom)}</span>
       <span class="rt">${s.id===myId?'<span class="me-tag">Moi</span>':''}${x.n1?`<span class="badge b-n1">N1 × ${x.n1}</span>`:''}${x.n2?`<span class="badge b-n2">N2 × ${x.n2}</span>`:''}</span>
-      <span class="sub">${c?c.label:''} · ${s.sexe==='F'?'Dame':'Homme'} · ${x.count} courses${x.bestPts?` · max ${x.bestPts} pts`:''}</span></button>`}).join('')}</div>`
+      <span class="sub">${(ci=>ci.now?ci.now.label+(ci.chg?` → ${ci.next.label} au 1<sup>er</sup> janv.`:''):(ci.next?ci.next.label+' au 1er janv.':''))(catInfo(s))} · ${s.sexe==='F'?'Dame':'Homme'} · ${x.count} courses${x.bestPts?` · max ${x.bestPts} pts`:''}</span></button>`}).join('')}</div>`
     :`<div class="empty"><b>Aucun nageur trouvé</b>Vérifiez l’orthographe, ou demandez à votre entraîneur de vous ajouter.</div>`;
   document.querySelectorAll('[data-sw]').forEach(b=>b.onclick=()=>go('s'+b.dataset.sw));
 }
@@ -455,10 +458,10 @@ function viewFiche(id){
   $('#view').innerHTML=`<button class="back" data-go="nageurs">‹ Nageurs</button>
   <div class="stack">
     <div class="panel"><h2 style="margin-bottom:2px">${esc(s.prenom)} ${esc(s.nom)}</h2>
-      <div class="muted small">${s.sexe==='F'?'Dame':'Homme'} · ${s.annee} · ${c?`<b style="color:var(--ink)">${c.label}</b> en ${REF_YEAR}`:'moins de 25 ans'}${s.club?' · '+esc(s.club):''}</div>
+      <div class="muted small">${s.sexe==='F'?'Dame':'Homme'} · ${s.annee} · ${(ci=>ci.now?`<b style="color:var(--ink)">${ci.now.label}</b> en ${NOWY()}${ci.chg?` · <b style="color:var(--accent)">${ci.next.label} dès le 1<sup>er</sup> janvier ${NOWY()+1}</b>`:''}`:ci.next?`<b style="color:var(--accent)">${ci.next.label} dès le 1<sup>er</sup> janvier ${NOWY()+1}</b>`:'moins de 25 ans')(catInfo(s))}${s.club?' · '+esc(s.club):''}</div>
       <div class="row" style="margin-top:10px">${x.n1?`<span class="badge b-n1">${x.n1} épreuve${x.n1>1?'s':''} N1</span>`:''}${x.n2?`<span class="badge b-n2">${x.n2} épreuve${x.n2>1?'s':''} N2</span>`:''}
         <button class="btn ${isMe?'ghost':''}" id="meBtn" style="margin-left:auto;padding:7px 12px">${isMe?'✓ C’est moi':'C’est moi'}</button></div>
-      <div class="small" style="margin-top:8px"><a href="https://ffn.extranat.fr/webffn/nat_recherche.php?idact=nat&idrch_id=${s.iuf}" target="_blank" rel="noopener">Voir sur extraNat</a></div></div>
+      ${c&&REF_YEAR>NOWY()?`<div class="small muted" style="margin-top:6px">La catégorie change chaque 1<sup>er</sup> janvier (âge atteint dans l’année). Qualifications et grilles ${REF_YEAR} calculées en ${c.label}.</div>`:''}<div class="small" style="margin-top:8px"><a href="https://ffn.extranat.fr/webffn/nat_recherche.php?idact=nat&idrch_id=${s.iuf}" target="_blank" rel="noopener">Voir sur extraNat</a></div></div>
     <div class="grid2">
       <div class="panel"><h3>Meilleurs temps · qualif. ${REF_YEAR}</h3>${evs.length?`<div class="tbl-wrap"><table><thead><tr><th>Épreuve</th><th class="num">25 m</th><th class="num">50 m</th><th>Qualif.</th></tr></thead><tbody>${bestRows}</tbody></table></div><p class="note" style="margin-top:8px">Touchez un temps pour l’analyser. « N2 +1.20 » = temps à gagner pour la grille N2.</p>`:'<div class="empty"><b>Aucune course</b></div>'}</div>
       <div class="panel"><h3>Mes zones d’entraînement</h3>${cs?zonesHTML(cs,css.pool)+`<p class="note" style="margin-top:8px">Test du ${fdate(css.date)}, enregistré sur ce téléphone. <button class="tlink" data-go="zones">Refaire le test</button></p>`:`<div class="empty"><b>Pas encore de test CSS</b><button class="btn" data-go="zones" style="margin-top:8px">Calculer mes zones</button></div>`}</div>
@@ -1611,7 +1614,8 @@ function capPool(){const p=capPresent();return swList().filter(s=>catOf(s.annee)
 function capBest(s,ev,pool,from){let b=null;for(const p of perfsOf(s.id)){if(p.ev!==ev||+p.pool!==+pool||!p.pts||(from&&p.date<from))continue;if(!b||p.pts>b.pts)b=p}return b}
 /* candidats d'un relais : chaque nageur avec sa meilleure perf (points FFN, coefficient d'âge inclus) sur la distance du relais */
 function capCands(sw,dist,kind,pool,from){
-  return sw.map(s=>{const t={};for(const st of (kind==='NL'?['NL']:ORDER4)){const b=capBest(s,dist+st,pool,from);if(b)t[st]=b}return Object.keys(t).length?{s,age:ageAt(s),t}:null}).filter(Boolean);
+  const Y=+pref('cap_year',String(NOWY()));
+  return sw.map(s=>{const t={};for(const st of (kind==='NL'?['NL']:ORDER4)){const b=capBest(s,dist+st,pool,from);if(b)t[st]=b}return Object.keys(t).length?{s,age:ageAt(s,Y),t}:null}).filter(Boolean);
 }
 function capEvalQuad(Q,kind){
   if(kind==='NL'){if(Q.some(c=>!c.t.NL))return null;const legs=Q.map(c=>({c,st:'NL',p:c.t.NL})).sort((a,b)=>a.p.t-b.p.t);return {legs,pts:legs.reduce((x,l)=>x+l.p.pts,0),time:legs.reduce((x,l)=>x+l.p.t,0)}}
@@ -1655,6 +1659,7 @@ function viewCaptain(){
       <label for="cap_pool">Temps de référence${selHTML('cap_pool',[[25,'Bassin 25 m'],[50,'Bassin 50 m']],pool,'Bassin')}</label>
       <label for="cap_win">Période${selHTML('cap_win',[['2',`Depuis ${REF_YEAR-2}`],['all','Tous les temps']],win,'Période')}</label>
       <label for="cap_one" class="wide">Règle${selHTML('cap_one',[['1','Une équipe maximum par catégorie (France relais, la plupart des meetings)'],['0','Plusieurs équipes par catégorie autorisées']],one?'1':'0','Règle')}</label>
+      <label for="cap_year">Année de la compétition${selHTML('cap_year',[[NOWY(),String(NOWY())+' (âges '+NOWY()+')'],[NOWY()+1,String(NOWY()+1)+' (âges '+(NOWY()+1)+')']],+pref('cap_year',String(NOWY())),'Année')}</label>
       <label for="cap_max">Nombre d’équipes max${selHTML('cap_max',[[1,'1'],[2,'2'],[3,'3'],[4,'4'],[6,'6'],[8,'8']],maxT,'Nombre')}</label></div>`
     :`<p class="small" style="margin:10px 0 0">Règle FFN Interclubs Maîtres : équipes de 10 nageurs (au moins 2 dames et 2 messieurs), une épreuve individuelle chacun, points FFN avec coefficient d’âge.</p>`}
     <div class="row" style="margin-top:12px"><button class="btn" id="cap_go">Composer les équipes</button></div></div>
@@ -1675,7 +1680,7 @@ function capTeamsHTML(title,teams,note){
   return `<div class="panel pcap"><div class="row" style="justify-content:space-between"><h3 style="margin:0">${esc(title)}</h3><span class="row" style="gap:8px"><span class="t" style="color:var(--accent);font-size:1.1rem">${tot} pts</span>${PBTN('Équipes',`data-printall=".pcap"`)}<button class="pbtn noprint" id="cap_share">Partager</button></span></div>
     <p class="small muted" style="margin:4px 0 0">${teams.length} équipe${teams.length>1?'s':''} · ${note}</p></div>
     ${teams.map((t,i)=>`<div class="panel pcap" style="background:var(--sunk)"><div class="row" style="justify-content:space-between"><h3 style="margin:0">${t.label||('Équipe '+(i+1))}${t.rc?` · ${t.rc} <span class="small muted" style="font-weight:400">${t.sum} ans</span>`:''}</h3><span class="t">${t.pts} pts${t.time?` · ${fmt(t.time)}`:''}</span></div>
-      <div style="display:flex;flex-direction:column;margin-top:6px">${t.legs.map((l,j)=>{const s=l.c?l.c.s:l.s;return `<div style="display:grid;grid-template-columns:${l.ev?'64px':(t.kind==='4N'?'52px':'22px')} minmax(0,1fr);gap:2px 8px;align-items:center;padding:7px 0;border-top:1px solid var(--line)"><span class="small muted" style="grid-row:1/3">${l.ev?EVL[l.ev]:(t.kind==='4N'?ST_LAB[l.st]:(j+1)+'.')}</span><span style="min-width:0"><button class="tlink" data-sw="${s.id}">${esc(swName(s))}</button></span><span class="small muted">${s.sexe==='F'?'Dame':'Homme'} · ${ageAt(s)} ans${l.p?` · <span class="t" style="color:var(--ink)">${fmt(l.p.t)}</span> · ${l.p.pts} pts`:''}</span></div>`}).join('')}</div></div>`).join('')}`;
+      <div style="display:flex;flex-direction:column;margin-top:6px">${t.legs.map((l,j)=>{const s=l.c?l.c.s:l.s;return `<div style="display:grid;grid-template-columns:${l.ev?'64px':(t.kind==='4N'?'52px':'22px')} minmax(0,1fr);gap:2px 8px;align-items:center;padding:7px 0;border-top:1px solid var(--line)"><span class="small muted" style="grid-row:1/3">${l.ev?EVL[l.ev]:(t.kind==='4N'?ST_LAB[l.st]:(j+1)+'.')}</span><span style="min-width:0"><button class="tlink" data-sw="${s.id}">${esc(swName(s))}</button></span><span class="small muted">${s.sexe==='F'?'Dame':'Homme'} · ${ageAt(s,l.ev?REF_YEAR:+pref('cap_year',String(NOWY())))} ans${l.p?` · <span class="t" style="color:var(--ink)">${fmt(l.p.t)}</span> · ${l.p.pts} pts`:''}</span></div>`}).join('')}</div></div>`).join('')}`;
 }
 function wireCapOut(){
   document.querySelectorAll('#cap_out [data-sw]').forEach(b=>b.onclick=()=>go('s'+b.dataset.sw));
@@ -1687,7 +1692,7 @@ function capRunRelay(){
   const teams=capSolve(quads,one,maxT).map(t=>({...t,kind:rel[3],pts:Math.round(t.pts)}));
   const gl={X:'mixtes',F:'dames',M:'messieurs'}[g];
   $('#cap_out').innerHTML=capTeamsHTML(`${rel[1]} ${gl}`,teams,`${one?'une équipe par catégorie d’âge':'catégories libres'} · points FFN des meilleurs ${rel[2]} m individuels (coefficient d’âge inclus), bassin ${pool} m${from?' depuis '+(REF_YEAR-2):''}.`)
-   +`<p class="note">${rel[3]==='4N'?'Ordre du 4 nages : dos, brasse, papillon, nage libre. Chaque nageur est placé sur la nage où il rapporte le plus pour l’équipe. ':''}Catégorie = somme des âges au 31/12/${REF_YEAR} (R1 100–119 ans … R8 360 ans et plus). Temps estimé = somme des meilleurs temps individuels ; les départs lancés font gagner 0,5 à 1 s par relayeur. Les points réels du relais dépendent du temps réalisé : ce calcul classe les combinaisons au plus juste avec les données disponibles.</p>`;
+   +`<p class="note">${rel[3]==='4N'?'Ordre du 4 nages : dos, brasse, papillon, nage libre. Chaque nageur est placé sur la nage où il rapporte le plus pour l’équipe. ':''}Catégorie = somme des âges au 31/12/${pref('cap_year',String(NOWY()))} : les âges changent au 1<sup>er</sup> janvier, choisissez l’année de la compétition (R1 100–119 ans … R8 360 ans et plus). Temps estimé = somme des meilleurs temps individuels ; les départs lancés font gagner 0,5 à 1 s par relayeur. Les points réels du relais dépendent du temps réalisé : ce calcul classe les combinaisons au plus juste avec les données disponibles.</p>`;
   wireCapOut();
 }
 function capRunIC(){
