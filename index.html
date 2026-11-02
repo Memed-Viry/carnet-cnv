@@ -1704,8 +1704,8 @@ function capRunIC(){
 }
 
 /* ================= GALERIE PHOTO PARTAGÉE (Cloudinary, sans compte pour les membres) ================= */
-const CLD_CLOUD='';   // nom du « cloud » Cloudinary du club
-const CLD_PRESET='';  // nom du preset d'envoi « unsigned »
+const CLD_CLOUD='egov2fvj';   // nom du « cloud » Cloudinary du club
+const CLD_PRESET='ipf1qikv';  // nom du preset d'envoi « unsigned »
 const CLD_TAG='carnetcnv';
 const cldUrl=(r,tr)=>`https://res.cloudinary.com/${CLD_CLOUD}/image/upload/${tr}/v${r.version}/${r.public_id}.${r.format==='heic'?'jpg':r.format}`;
 let GAL=null, GAL_ERR='', GAL_DEL=new Set();
@@ -1727,7 +1727,7 @@ async function galUpload(files){
   if(album) setPref('gal_album',album);
   let n=0; for(const f of files){ if(!/^image\//.test(f.type)&&!/\.(heic|heif|jpe?g|png|webp)$/i.test(f.name)) continue; n++;
     msg.textContent=`Envoi ${n} / ${files.length}…`;
-    try{const blob=await galResize(f); const fd=new FormData(); fd.append('file',blob,'photo.jpg'); fd.append('upload_preset',CLD_PRESET); fd.append('tags',CLD_TAG); fd.append('return_delete_token','true');
+    try{const blob=await galResize(f); const fd=new FormData(); fd.append('file',blob,'photo.jpg'); fd.append('upload_preset',CLD_PRESET); fd.append('tags',CLD_TAG);
       const ctx=[album&&('album='+album.replace(/[|=]/g,' ')),cap&&('caption='+cap.replace(/[|=]/g,' ')),who&&('auteur='+who.replace(/[|=]/g,' '))].filter(Boolean).join('|'); if(ctx) fd.append('context',ctx);
       const r=await fetch(`https://api.cloudinary.com/v1_1/${CLD_CLOUD}/image/upload`,{method:'POST',body:fd}); const j=await r.json(); if(!r.ok) throw new Error(j.error&&j.error.message||r.status);
       GAL=[{...j,context:{custom:{album,caption:cap,auteur:who}}},...(GAL||[])]; if(j.delete_token){try{const t=JSON.parse(ls.get('gal_tok')||'{}');t[j.public_id]=[j.delete_token,Date.now()];ls.set('gal_tok',JSON.stringify(t))}catch(e){}}
