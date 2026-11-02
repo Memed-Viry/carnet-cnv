@@ -1718,10 +1718,19 @@ async function galLoad(){
     GAL_DEL=del; GAL=(j.resources||[]).filter(r=>!del.has(r.public_id)).sort((a,b)=>a.created_at<b.created_at?1:-1); GAL_ERR='';
   }catch(e){GAL_ERR='Impossible de charger les photos (réseau ?).'; if(!GAL) GAL=[]}
 }
-function galResize(file,max=1600,q=0.82){return new Promise((ok,ko)=>{const img=new Image();const u=URL.createObjectURL(file);
-  img.onload=()=>{let w=img.naturalWidth,h=img.naturalHeight;const k=Math.min(1,max/Math.max(w,h));w=Math.round(w*k);h=Math.round(h*k);
-    const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);URL.revokeObjectURL(u);c.toBlob(b=>b?ok(b):ko(new Error('conversion')),'image/jpeg',q)};
-  img.onerror=()=>{URL.revokeObjectURL(u);ok(file)}; img.src=u})}
+async function galResize(file,max=1600,q=0.82){
+  // 1) lire le fichier en mémoire (sur Android, une photo « dans le cloud » ou devenue inaccessible échoue ici)
+  let buf; try{buf=await file.arrayBuffer()}catch(e){throw new Error('photo illisible sur le téléphone (photo stockée seulement en ligne ? ouvrez-la ou téléchargez-la d’abord dans Galerie/Google Photos)')}
+  if(!buf.byteLength) throw new Error('photo vide ou non téléchargée sur le téléphone');
+  const src=new Blob([buf],{type:file.type||'image/jpeg'});
+  // 2) décoder et réduire
+  let bmp=null; try{bmp=await createImageBitmap(src,{imageOrientation:'from-image'})}catch(e){}
+  if(!bmp){bmp=await new Promise(ok=>{const im=new Image();const u=URL.createObjectURL(src);im.onload=()=>{URL.revokeObjectURL(u);ok(im)};im.onerror=()=>{URL.revokeObjectURL(u);ok(null)};im.src=u})}
+  if(!bmp) return src; // format non décodable : envoi tel quel
+  let w=bmp.width||bmp.naturalWidth,h=bmp.height||bmp.naturalHeight;const k=Math.min(1,max/Math.max(w,h));w=Math.round(w*k);h=Math.round(h*k);
+  const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(bmp,0,0,w,h); if(bmp.close)bmp.close();
+  return await new Promise(ok=>c.toBlob(b=>ok(b||src),'image/jpeg',q));
+}
 async function galUpload(files){
   const msg=$('#gal_msg'), album=($('#gal_album').value||'').trim().slice(0,60), cap=($('#gal_cap').value||'').trim().slice(0,120), who=me()&&S.sw[me()]?swName(S.sw[me()]):'';
   if(album) setPref('gal_album',album);
@@ -1729,12 +1738,12 @@ async function galUpload(files){
   let ok=0, ko=0, lastErr='';
   for(let n=0;n<imgs.length;n++){ const f=imgs[n];
     msg.textContent=`Envoi ${n+1} / ${imgs.length}… (gardez l’appli ouverte)`;
-    let blob=f; try{blob=await galResize(f)}catch(e){}
+    let blob; try{blob=await galResize(f)}catch(e){ko++;lastErr=e.message;continue}
     if(blob.size>10e6){ko++;lastErr='photo trop lourde (plus de 10 Mo) et non convertible';continue}
     const ctx=[album&&('album='+album.replace(/[|=]/g,' ')),cap&&('caption='+cap.replace(/[|=]/g,' ')),who&&('auteur='+who.replace(/[|=]/g,' '))].filter(Boolean).join('|');
     let done=false;
     for(let a=0;a<3&&!done;a++){
-      try{const fd=new FormData(); fd.append('file',blob,blob===f?(f.name||'photo.jpg'):'photo.jpg'); fd.append('upload_preset',CLD_PRESET); fd.append('tags',CLD_TAG); if(ctx) fd.append('context',ctx);
+      try{const fd=new FormData(); fd.append('file',blob,'photo.jpg'); fd.append('upload_preset',CLD_PRESET); fd.append('tags',CLD_TAG); if(ctx) fd.append('context',ctx);
         const ctl=new AbortController(); const to=setTimeout(()=>ctl.abort(),90000); const r=await fetch(`https://api.cloudinary.com/v1_1/${CLD_CLOUD}/image/upload`,{method:'POST',body:fd,signal:ctl.signal}); clearTimeout(to); const j=await r.json().catch(()=>({})); if(!r.ok) throw new Error((j.error&&j.error.message)||('erreur '+r.status));
         GAL=[{...j,context:{custom:{album,caption:cap,auteur:who}}},...(GAL||[])]; done=true; ok++;
       }catch(e){lastErr=e.message||String(e); if(/preset|not allowed|whitelisted|Invalid/i.test(lastErr)) break; await new Promise(r=>setTimeout(r,1500*(a+1)))}
