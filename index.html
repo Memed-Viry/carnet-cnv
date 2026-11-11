@@ -126,7 +126,7 @@ svg text{fill:var(--muted);font-family:var(--f-mono);font-size:11px}
 .form label{display:flex;flex-direction:column;gap:4px;font-size:.8rem;font-weight:600;color:var(--muted)}
 .form .wide{grid-column:1/-1}
 nav.bottom{position:fixed;left:0;right:0;bottom:0;z-index:15;background:var(--surface);border-top:1px solid var(--line);display:flex;justify-content:center;padding-left:max(0px,env(safe-area-inset-left,0px));padding-right:max(0px,env(safe-area-inset-right,0px));padding-bottom:env(safe-area-inset-bottom,0px)}
-nav.bottom .in{display:grid;grid-template-columns:repeat(5,1fr);width:100%;max-width:560px}
+nav.bottom .in{display:grid;grid-template-columns:repeat(6,1fr);width:100%;max-width:560px}
 nav.bottom button{background:none;border:0;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 2px 10px;font:600 .7rem var(--f-body);letter-spacing:.02em;cursor:pointer;min-height:var(--nav-h)}
 nav.bottom button svg{width:24px;height:24px}
 nav.bottom button[aria-current="page"]{color:var(--accent)}
@@ -177,6 +177,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
     <button data-go="moi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="8" r="3.6"/><path d="M5 20c1-3.8 3.8-6 7-6s6 2.2 7 6"/></svg>Ma fiche</button>
     <button data-go="club"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4h10v4a5 5 0 0 1-10 0z"/><path d="M7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4"/><path d="M12 13v4M8 20h8"/></svg>Club</button>
     <button data-go="entr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 17c2-2 4-2 6 0s4 2 6 0 4-2 6 0"/><path d="M3 11c2-2 4-2 6 0s4 2 6 0 4-2 6 0"/><path d="M12 3v3"/></svg>Entraîn.</button>
+    <button data-go="chrono"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13.5" r="7.5"/><path d="M12 13.5V9.5M10 2.5h4M12 2.5V6M18.5 6.5l1.5-1.5"/></svg>Chrono</button>
     <button data-go="forme"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.4 6.8 19.1l1-5.8L3.5 9.2l5.9-.9z"/></svg>Coach</button>
   </div>
 </nav>
@@ -484,6 +485,7 @@ function viewFiche(id){
       <div class="panel"><h3>Mes zones d’entraînement</h3>${cs?zonesHTML(cs,css.pool)+`<p class="note" style="margin-top:8px">Test du ${fdate(css.date)}, enregistré sur ce téléphone. <button class="tlink" data-go="zones">Refaire le test</button></p>`:`<div class="empty"><b>Pas encore de test CSS</b><button class="btn" data-go="zones" style="margin-top:8px">Calculer mes zones</button></div>`}</div>
     </div>
     ${wkFicheHTML(s)}
+    ${chrFicheHTML(s)}
     ${persoAnalysisHTML(s)}
     ${bodyFicheHTML(s)}
     <div class="panel"><h3>Coach</h3><p class="small muted" style="margin-top:0">Bilan expert, nutrition selon le poids et la taille, musculation illustrée spécifique à la nage.</p><div class="row"><button class="btn" data-go="forme-${id}">Bilan du coach</button><button class="btn" data-go="nutri-${id}">Nutrition</button><button class="btn ghost" data-go="muscu-${id}">Musculation</button></div></div>
@@ -494,7 +496,7 @@ function viewFiche(id){
   const by=$('#bestYr'); if(by) by.onchange=()=>{bestYr=+by.value;$('#bestYrBody').innerHTML=bestYearHTML(ps,bestYr,evs);wire()};
   const pe=$('#progEv'); if(pe) pe.onchange=()=>{progEv=pe.value;$('#progChart').innerHTML=progChart(s,progEv)};
   document.querySelectorAll('[data-more]').forEach(b=>b.onclick=()=>{OPEN.add(id+b.dataset.more); const y=window.scrollY; viewFiche(id); window.scrollTo(0,y)});
-  wireFicheExtras(s); wireBodyFiche(s);
+  wireFicheExtras(s); wireBodyFiche(s); chrWire(s);
   $('#meBtn').onclick=()=>{if(isMe) ls.del('me'); else ls.set('me',id); viewFiche(id)};
   wire();
 }
@@ -893,7 +895,7 @@ function viewEntr(){
     <p class="small" style="margin:0 0 10px">${myPh.lab}${myPh.comp?` · ${myPh.weeks} semaine${myPh.weeks>1?'s':''} avant « ${esc(myPh.comp.t)} »`:''} · ${myPr.sess} séances de ${myPr.dur} min</p>
     <div class="row"><button class="btn" data-go="prog-${s.id}">Voir mes séances de la semaine</button><button class="btn ghost" data-go="prof-${s.id}">Réglages</button></div></div>`
   :`<div class="hint"><span>Indiquez « C’est moi » sur votre fiche pour obtenir un <b>programme personnalisé</b> selon votre spécialité et vos temps.</span></div>`}
-  <div class="panel"><div class="row" style="justify-content:space-between;align-items:center;gap:10px"><div style="min-width:0"><h2 style="margin:0">⏱ Chrono de séries</h2><p class="small muted" style="margin:2px 0 0">Départs automatiques avec bips, allure cible, jusqu’à 8 nageurs, analyse de la régularité.</p></div><button class="btn" data-go="chrono">Ouvrir</button></div></div>
+  <div class="panel"><div class="row" style="justify-content:space-between;align-items:center;gap:10px"><div style="min-width:0"><h2 style="margin:0">⏱ Chrono de séries</h2><p class="small muted" style="margin:2px 0 0">Départs automatiques avec bips, allure cible, jusqu’à 8 nageurs, analyse de la régularité.</p></div><button class="btn" data-go="series">Ouvrir</button></div></div>
   <div class="panel"><h2>Séance libre</h2>
     <div class="form"><label for="sc">Allure CSS /100 m${cs?` <span class="muted" style="font-weight:400">(votre test)</span>`:''}${TIN('sc',cssPace,false)}</label>
     <label for="st">Objectif${selHTML('st',Object.entries(SETS).map(([k,v])=>[k,v.lab]),pref('ses_type','z4'),'Objectif')}</label>
@@ -1927,7 +1929,7 @@ function viewChrono(){
       <div style="display:flex;gap:6px;align-items:center"><b style="width:1.3em;color:var(--muted)">${i+1}</b><select data-k="id" aria-label="Nageur ${i+1}" style="flex:1;min-width:0"><option value="">— Nom libre —</option>${sw.map(s=>`<option value="${s.id}"${s.id===r.id?' selected':''}>${esc(s.nom+' '+s.prenom)}</option>`).join('')}</select><button class="btn ghost" data-del="${i}" aria-label="Retirer" style="padding:8px 12px"${rows.length<2?' disabled':''}>×</button></div>
       <div style="display:flex;gap:8px;align-items:center;margin-top:6px;padding-left:calc(1.3em + 6px);flex-wrap:wrap">${r.id?'':`<input data-k="name" placeholder="Prénom" aria-label="Prénom du nageur ${i+1}" value="${esc(r.name||'')}" style="flex:1 1 100%;min-width:0">`}<span class="small muted" style="font-weight:600">CSS /100 m</span>${TIN('chcss'+i,r.css||105,false)}</div></div>`;
   const H=chHist();
-  $('#view').innerHTML=`<button class="back" data-go="entr">‹ Entraînement</button><div class="stack">
+  $('#view').innerHTML=`<div class="stack">${CHTABS('series')}
   <div class="panel"><h2>Chrono de séries</h2><p class="small muted" style="margin-top:0">Départs automatiques avec bips, allure cible de chaque nageur selon sa CSS, analyse de la régularité. Jusqu’à ${CH_MAX} nageurs, idéal : 6 avec départs décalés.</p>
     <div class="form">
       <label for="ch_n">Répétitions<input id="ch_n" type="number" inputmode="numeric" min="1" max="60" value="${pref('ch_n',10)}"></label>
@@ -2062,7 +2064,7 @@ function chBars(x,A){
 }
 function chResults(rec,fromHist){
   const sws=rec.sw.filter(x=>x.times.length);
-  $('#view').innerHTML=`<button class="back" data-go="chrono">‹ Chrono</button><div class="stack">
+  $('#view').innerHTML=`<button class="back" data-go="series">‹ Séries</button><div class="stack">
   <div class="panel"><div class="row" style="justify-content:space-between;align-items:flex-start"><div><h2 style="margin:0">${rec.n} × ${rec.d} m</h2><div class="small muted">${fdate(rec.date)} · ${rec.m==='cyc'?'départ '+fmtS(rec.cyc):'repos '+rec.rest+' s'} · ${chZoneLab(rec.z)}</div></div>${PBTN('Série chronométrée')}</div>
   ${sws.length?sws.map(x=>{const A=chAnalyse(x,rec);return `<div style="border-top:1px solid var(--line);margin-top:12px;padding-top:10px">
     <h3 style="margin:0 0 6px">${esc(x.name)}${A.T?` <span class="small muted" style="font-weight:400">· objectif ${fmt(A.T.t,1)} (CSS ${fmtS(x.css)})</span>`:''}</h3>
@@ -2072,16 +2074,189 @@ function chResults(rec,fromHist){
     <ul style="margin:8px 0 0;padding-left:18px">${A.msg.map(m=>`<li class="small" style="margin:3px 0">${m}</li>`).join('')}${A.cmp?`<li class="small" style="margin:3px 0">Même série le ${fdate(A.cmp.date)} : moyenne ${fmt(A.cmp.avg,1)} → <b>${fmt(A.avg,1)}</b> (<b style="color:${A.cmp.gain<=0?'#1d9e5a':'#d9472f'}">${fmtGap(A.cmp.gain)}</b>).</li>`:''}</ul></div>`}).join('')
   :'<div class="empty"><b>Aucun temps enregistré</b></div>'}
   <p class="note" style="margin-top:10px">Couleurs : <b style="color:#1d9e5a">dans la zone</b> · <b style="color:#d9472f">trop rapide</b> · <b style="color:#e0a21b">trop lent</b>. Temps pris au toucher : comptez ± 0,2 s.${fromHist?'':' Série enregistrée sur ce téléphone.'}</p></div>
-  <div class="row"><button class="btn" data-go="chrono">Nouvelle série</button>${chHist().some(h=>h.ts===rec.ts)?`<button class="btn ghost" id="ch_rdel" style="color:var(--rope);border-color:var(--rope)">🗑 Supprimer cette série</button>`:''}</div></div>`;
-  const rd=$('#ch_rdel'); if(rd) rd.onclick=()=>{if(confirm('Supprimer cette série ? Action définitive.')){chDel(rec.ts);go('chrono')}};
+  <div class="row"><button class="btn" data-go="series">Nouvelle série</button>${chHist().some(h=>h.ts===rec.ts)?`<button class="btn ghost" id="ch_rdel" style="color:var(--rope);border-color:var(--rope)">🗑 Supprimer cette série</button>`:''}</div></div>`;
+  const rd=$('#ch_rdel'); if(rd) rd.onclick=()=>{if(confirm('Supprimer cette série ? Action définitive.')){chDel(rec.ts);go('series')}};
   window.scrollTo(0,0); wire();
 }
+
+const CHTABS=cur=>`<div class="chips" role="tablist" style="margin:0">${[['chrono','⏱ Course'],['series','🔁 Séries']].map(([k,l])=>`<button class="chip-f" data-go="${k}" aria-pressed="${k===cur}">${l}</button>`).join('')}</div>`;
+/* ================= CHRONO DE COURSE (temps de passage) + envoi au nageur ================= */
+const CR_MAX=6, CR_TAG='carnetcnv_chr';
+const CR_EVD=[50,100,200,400,800,1500];
+let CR=null, CHR=null, CHR_ERR='';
+const crHist=()=>{try{return JSON.parse(ls.get('chrono_races')||'[]')}catch(e){return []}};
+const crLaps=(d,lap)=>{const L=[25,50,100,200,400].filter(x=>x<d&&d%x===0);return L.includes(+lap)?+lap:(L.includes(50)?50:L[0]||d)};
+function crDefaultComp(){
+  const t=today();
+  try{const ids=new Set(Object.keys(WEEKEND.e||{}).filter(id=>!(S.sw[id]&&S.sw[id].ext)));for(const id of ids)for(const r of WEEKEND.e[id]){const c=WEEKEND.comps[r.c];if(c&&c.d1<=t&&c.d2>=t) return c.t+' ('+c.l+')'}}catch(e){}
+  const e=CAL.find(e=>e.d&&e.d<=t&&(e.d2||e.d)>=t); return e?e.t:'';
+}
+function viewChronoCourse(){
+  let rows=[]; try{rows=JSON.parse(ls.get('cr_rows')||'[]')}catch(e){}
+  if(!rows.length) rows=[me()||''];
+  const sw=swList(), d=+pref('cr_d',100), lap=crLaps(d,pref('cr_lap',50));
+  const H=crHist();
+  $('#view').innerHTML=`<div class="stack">${CHTABS('chrono')}
+  <div class="panel"><h2>Chrono de course</h2><p class="small muted" style="margin-top:0">Chronométrez jusqu’à ${CR_MAX} nageurs du club en même temps, avec un temps de passage à chaque 25, 50, 100, 200 ou 400 m. À la fin, le temps et les passages sont envoyés sur la fiche de chaque nageur, visibles par tout le club.</p>
+    <div class="form">
+      <label for="cr_s">Nage${selHTML('cr_s',[['NL','Nage libre'],['D','Dos'],['B','Brasse'],['P','Papillon'],['4N','4 nages']],pref('cr_s','NL'),'Nage')}</label>
+      <label for="cr_d">Distance${selHTML('cr_d',CR_EVD.map(x=>[x,x+' m']),d,'Distance')}</label>
+      <label for="cr_lap">Temps de passage tous les${selHTML('cr_lap',[25,50,100,200,400].filter(x=>x<d&&d%x===0).map(x=>[x,x+' m']),lap,'Intervalle des passages')}</label>
+      <label for="cr_p">Bassin${selHTML('cr_p',[[25,'25 m'],[50,'50 m']],pref('cr_p',25),'Bassin')}</label>
+      <label for="cr_st" class="wide">Départ${selHTML('cr_st',[['all','Départ commun : un bouton lance tous les chronos'],['ind','Départ individuel : 1re touche sur la case du nageur']],pref('cr_st','all'),'Départ')}</label>
+      <label for="cr_c" class="wide">Compétition<input id="cr_c" value="${esc(pref('cr_c_'+today(),crDefaultComp()))}" placeholder="ex. Interclubs Maîtres IDF, Massy"></label>
+    </div>
+    <h3 style="margin:14px 0 2px">Nageurs <span class="small muted" style="font-weight:400">(${CR_MAX} maximum, dans l’ordre des couloirs)</span></h3>
+    <div id="cr_rows">${rows.map((id,i)=>`<div class="crrow" style="display:flex;gap:6px;align-items:center;padding:6px 0;border-top:1px solid var(--line)"><b style="width:1.3em;color:var(--muted)">${i+1}</b><select data-cr="${i}" aria-label="Nageur ${i+1}" style="flex:1;min-width:0"><option value="">— Choisir —</option>${sw.map(s=>`<option value="${s.id}"${s.id===id?' selected':''}>${esc(s.nom+' '+s.prenom)}</option>`).join('')}</select><button class="btn ghost" data-crdel="${i}" aria-label="Retirer" style="padding:8px 12px"${rows.length<2?' disabled':''}>×</button></div>`).join('')}</div>
+    <div class="row" style="margin-top:8px"><button class="btn ghost" id="cr_add"${rows.length>=CR_MAX?' disabled':''}>+ Ajouter un nageur</button></div>
+    <div class="row" style="margin-top:12px"><button class="btn" id="cr_go" style="font-size:1.05rem;padding:12px 22px">⏱ Ouvrir le chrono</button></div>
+    <p class="note" style="margin-top:10px">Touchez la case d’un nageur à chaque passage, puis à l’arrivée. Temps manuel : comptez ± 0,2 s. Le temps officiel arrive ensuite avec la mise à jour extraNat.</p></div>
+  ${H.length?`<div class="panel"><h3>Courses chronométrées sur ce téléphone</h3><div style="display:flex;flex-direction:column">${H.map((h,i)=>`<div style="display:flex;gap:6px;align-items:center"><button class="item" data-crh="${i}" style="text-align:left;flex:1;min-width:0"><div style="min-width:0"><b>${dist(h.ev)} ${STROKE_NAME[strokeOf(h.ev)]}</b> <span class="small muted">· ${fdate(h.date)} · ${h.sw.map(x=>esc(x.name)).join(', ')}</span></div></button><button class="btn ghost" data-crhdel="${h.ts}" aria-label="Supprimer" style="padding:6px 12px">🗑</button></div>`).join('')}</div></div>`:''}
+  </div>`;
+  const read=()=>[...document.querySelectorAll('[data-cr]')].map(s=>s.value);
+  const save=r=>ls.set('cr_rows',JSON.stringify(r));
+  $('#cr_d').onchange=()=>{setPref('cr_d',$('#cr_d').value);setPref('cr_lap',$('#cr_lap').value);save(read());viewChronoCourse()};
+  document.querySelectorAll('[data-crdel]').forEach(b=>b.onclick=()=>{const r=read();r.splice(+b.dataset.crdel,1);save(r);viewChronoCourse()});
+  $('#cr_add').onclick=()=>{const r=read();if(r.length<CR_MAX){r.push('');save(r);viewChronoCourse()}};
+  document.querySelectorAll('[data-crh]').forEach(b=>b.onclick=()=>crResults(crHist()[+b.dataset.crh]));
+  document.querySelectorAll('[data-crhdel]').forEach(b=>b.onclick=()=>{if(confirm('Supprimer cette course de ce téléphone ? (les temps déjà envoyés restent sur les fiches)')){ls.set('chrono_races',JSON.stringify(crHist().filter(h=>h.ts!==+b.dataset.crhdel)));viewChronoCourse()}});
+  $('#cr_go').onclick=()=>{
+    const ids=read().filter(Boolean); if(!ids.length){alert('Choisissez au moins un nageur.');return}
+    if(new Set(ids).size!==ids.length){alert('Un même nageur est choisi deux fois.');return}
+    const s=$('#cr_s').value, D=+$('#cr_d').value, lp=+$('#cr_lap').value, pool=+$('#cr_p').value, st=$('#cr_st').value, comp=$('#cr_c').value.trim();
+    save(read()); setPref('cr_s',s); setPref('cr_d',D); setPref('cr_lap',lp); setPref('cr_p',pool); setPref('cr_st',st); setPref('cr_c_'+today(),comp);
+    crStart({ev:D+s,d:D,lap:lp,pool,st,comp,sw:ids.map(id=>({id,name:swName(S.sw[id])}))});
+  };
+  wire();
+}
+function crStart(cfg){
+  chWake(true);
+  CR={cfg,run:true,t0:null,sw:cfg.sw.map(x=>({...x,start:null,sp:[]}))};
+  const nSp=cfg.d/cfg.lap, N=CR.sw.length, cols=N<=3?1:2;
+  let ov=$('#ch_ov'); if(!ov){ov=document.createElement('div');ov.id='ch_ov';document.body.appendChild(ov)}
+  ov.style.cssText='position:fixed;inset:0;z-index:60;background:#07141d;color:#fff;display:flex;flex-direction:column;padding:max(10px,env(safe-area-inset-top)) 10px max(10px,env(safe-area-inset-bottom));user-select:none;-webkit-user-select:none;touch-action:manipulation';
+  ov.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+      <div style="min-width:0"><div id="cr_clk" style="font:700 2.3rem/1 var(--f-display);font-variant-numeric:tabular-nums">0:00.0</div><div style="font-size:.8rem;opacity:.75">${cfg.d} m ${STROKE_NAME[strokeOf(cfg.ev)]} · passages tous les ${cfg.lap} m · bassin ${cfg.pool} m</div></div>
+      <button id="cr_end" style="background:#cf3426;color:#fff;border:0;border-radius:10px;padding:12px 16px;font-weight:700;font-size:1rem">Terminer</button></div>
+    ${cfg.st==='all'?`<button id="cr_all" style="margin-top:10px;background:#1d9e5a;color:#fff;border:0;border-radius:14px;padding:16px;font:700 1.6rem/1 var(--f-display)">▶ DÉPART</button>`:''}
+    <div style="flex:1;display:grid;grid-template-columns:repeat(${cols},minmax(0,1fr));grid-auto-rows:1fr;gap:8px;margin-top:10px;min-height:0">${CR.sw.map((x,i)=>`<div data-crs="${i}" role="button" style="position:relative;border-radius:14px;background:#12324a;padding:8px 10px;display:flex;flex-direction:column;justify-content:space-between;min-height:0;overflow:hidden;cursor:pointer">
+      <div style="display:flex;justify-content:space-between;gap:6px;font-size:.95rem"><b style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(S.sw[x.id].prenom+' '+S.sw[x.id].nom[0]+'.')}</b><span data-st style="opacity:.8;white-space:nowrap"></span></div>
+      <div data-big style="font:700 ${N<=2?'3.6rem':N<=4?'2.6rem':'2.1rem'}/1 var(--f-display);font-variant-numeric:tabular-nums;text-align:center"></div>
+      <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:6px;font-size:.85rem"><span data-last style="font-variant-numeric:tabular-nums;opacity:.9"></span><button data-crundo="${i}" aria-label="Annuler le dernier passage" style="background:rgba(255,255,255,.12);color:#fff;border:0;border-radius:8px;padding:4px 8px;font-size:.85rem">↶</button></div></div>`).join('')}</div>`;
+  ov.querySelectorAll('[data-crs]').forEach(el=>el.addEventListener('pointerdown',e=>{if(e.target.closest('[data-crundo]')) return;e.preventDefault();crTap(+el.dataset.crs)}));
+  ov.querySelectorAll('[data-crundo]').forEach(b=>b.addEventListener('pointerdown',e=>{e.stopPropagation();e.preventDefault();crUndo(+b.dataset.crundo)}));
+  const ba=$('#cr_all'); if(ba) ba.addEventListener('pointerdown',e=>{e.preventDefault();const now=performance.now();CR.t0=now;CR.sw.forEach(x=>{if(x.start==null)x.start=now});ba.remove();if(navigator.vibrate)try{navigator.vibrate(60)}catch(e){}});
+  $('#cr_end').onclick=()=>{if(!CR.sw.some(x=>x.sp.length)||confirm('Terminer ? Les nageurs non arrivés seront ignorés.')) crFinish()};
+  clearInterval(CR.iv); CR.iv=setInterval(crTick,50); crTick();
+}
+function crTap(i){
+  const x=CR&&CR.sw[i]; if(!x||!CR.run) return; const now=performance.now(), nSp=CR.cfg.d/CR.cfg.lap;
+  if(x.start==null){ if(CR.cfg.st==='ind'){x.start=now;if(!CR.t0)CR.t0=now;if(navigator.vibrate)try{navigator.vibrate(60)}catch(e){}} return }
+  if(x.sp.length>=nSp) return;
+  const t=(now-x.start)/1000, prev=x.sp.length?x.sp[x.sp.length-1]:0; if(t-prev<4) return; // anti double-touche
+  x.sp.push(Math.round(t*100)/100); if(navigator.vibrate)try{navigator.vibrate(35)}catch(e){}
+  if(CR.sw.every(s=>s.sp.length>=nSp)) setTimeout(crFinish,1200);
+}
+function crUndo(i){const x=CR&&CR.sw[i]; if(x&&x.sp.length) x.sp.pop()}
+function crTick(){
+  if(!CR||!CR.run) return; const now=performance.now(), c=CR.cfg, nSp=c.d/c.lap, ov=$('#ch_ov'); if(!ov) return;
+  $('#cr_clk').textContent=CR.t0?fmt((now-CR.t0)/1000,1):(c.st==='all'?'Prêt':'Touchez une case au départ');
+  CR.sw.forEach((x,i)=>{const el=ov.querySelector(`[data-crs="${i}"]`); if(!el) return; const k=x.sp.length, done=k>=nSp;
+    el.querySelector('[data-st]').textContent=x.start==null?'':done?'Arrivé':`→ ${c.lap*(k+1)} m`;
+    const big=el.querySelector('[data-big]');
+    if(x.start==null){big.innerHTML=`<span style="font-size:.5em;opacity:.7">${c.st==='ind'?'Touchez au départ':'En attente'}</span>`;el.style.background='#12324a'}
+    else if(done){big.textContent=fmt(x.sp[k-1]);el.style.background='#1d3b2c'}
+    else {big.textContent=fmt((now-x.start)/1000,1);el.style.background='#0b5394'}
+    el.querySelector('[data-last]').textContent=k?`${c.lap*k} m : ${fmt(x.sp[k-1])}${k>1?' ('+fmt(x.sp[k-1]-x.sp[k-2])+')':''}`:'';
+  });
+}
+function crFinish(){
+  if(!CR) return; CR.run=false; clearInterval(CR.iv); chWake(false); const ov=$('#ch_ov'); if(ov) ov.remove();
+  const c=CR.cfg, nSp=c.d/c.lap;
+  const rec={ts:Date.now(),date:today(),ev:c.ev,pool:c.pool,lap:c.lap,comp:c.comp,sw:CR.sw.filter(x=>x.sp.length>=nSp).map(x=>({id:x.id,name:x.name,sp:x.sp,sent:false}))};
+  CR=null;
+  if(rec.sw.length){const H=crHist();H.unshift(rec);ls.set('chrono_races',JSON.stringify(H.slice(0,80)))}
+  crResults(rec);
+}
+function crSplitsHTML(sp,lap){
+  return `<div class="tbl-wrap"><table><thead><tr><th>Distance</th><th class="num">Temps</th><th class="num">Fraction</th></tr></thead><tbody>${sp.map((t,i)=>`<tr><td>${lap*(i+1)} m</td><td class="num t">${fmt(t)}</td><td class="num t">${fmt(i?t-sp[i-1]:t)}</td></tr>`).join('')}</tbody></table></div>`;
+}
+function crResults(rec){
+  const who=me()&&S.sw[me()]?swName(S.sw[me()]):'';
+  $('#view').innerHTML=`<button class="back" data-go="chrono">‹ Chrono de course</button><div class="stack">
+  <div class="panel"><div class="row" style="justify-content:space-between;align-items:flex-start"><div><h2 style="margin:0">${dist(rec.ev)} m ${STROKE_NAME[strokeOf(rec.ev)]}</h2><div class="small muted">${fdate(rec.date)} · bassin ${rec.pool} m${rec.comp?' · '+esc(rec.comp):''}</div></div>${PBTN('Chronos de course')}</div>
+  ${rec.sw.length?rec.sw.map((x,i)=>{const t=x.sp[x.sp.length-1], pb=bestOf(x.id,rec.ev,rec.pool), isPb=!pb||t<pb.t;
+    return `<div style="border-top:1px solid var(--line);margin-top:12px;padding-top:10px">
+    <div class="row" style="justify-content:space-between;align-items:baseline"><h3 style="margin:0">${esc(x.name)}</h3><span class="t" style="font-size:1.4rem;font-weight:700">${fmt(t)}</span></div>
+    <div class="small" style="margin:2px 0 8px">${pb?`Record perso ${rec.pool} m : <b class="t">${fmt(pb.t)}</b> · ${isPb?`<b style="color:#1d9e5a">nouveau record (${fmtGap(t-pb.t)})</b>`:`écart <b>${fmtGap(t-pb.t)}</b>`}`:'Premier temps sur cette épreuve'}</div>
+    ${crSplitsHTML(x.sp,rec.lap)}
+    <label class="small noprint" style="display:flex;gap:8px;align-items:center;margin-top:8px"><input type="checkbox" data-crsend="${i}" ${x.sent?'disabled checked':'checked'}> ${x.sent?'<b style="color:#1d9e5a">Envoyé sur la fiche ✓</b>':'Envoyer sur la fiche du nageur'}</label></div>`}).join('')
+  :'<div class="empty"><b>Aucun nageur arrivé</b>Seuls les nageurs avec tous leurs passages sont gardés.</div>'}
+  ${rec.sw.some(x=>!x.sent)?`<div class="noprint" style="margin-top:14px"><label class="small" style="display:flex;flex-direction:column;gap:4px;font-weight:600;color:var(--muted)">Compétition<input id="cr_rc" value="${esc(rec.comp||'')}" placeholder="Nom de la compétition"></label>
+    <div class="row" style="margin-top:10px"><button class="btn" id="cr_send">📤 Envoyer aux nageurs</button><button class="btn ghost" id="cr_share">Partager (WhatsApp, SMS…)</button></div><p id="cr_msg" class="small" style="margin:8px 0 0"></p></div>`
+  :rec.sw.length?`<div class="row noprint" style="margin-top:14px"><button class="btn ghost" id="cr_share">Partager (WhatsApp, SMS…)</button></div>`:''}
+  <p class="note" style="margin-top:10px">Envoyé = visible par tout le club dans la fiche du nageur, rubrique « Chronos du club »${who?`, signé ${esc(who)}`:''}.</p></div>
+  <div class="row"><button class="btn" data-go="chrono">Nouvelle course</button></div></div>`;
+  window.scrollTo(0,0);
+  const txt=()=>`⏱ ${dist(rec.ev)} m ${STROKE_NAME[strokeOf(rec.ev)]}${rec.comp?' · '+rec.comp:''} (${fdate(rec.date)}, chrono manuel)\n`+rec.sw.map(x=>`${x.name} : ${fmt(x.sp[x.sp.length-1])}\n  `+x.sp.map((t,i)=>`${rec.lap*(i+1)} m ${fmt(t)}`).join(' · ')).join('\n')+`\n${location.origin.includes('github.io')?location.origin+location.pathname:''}`;
+  const sh=$('#cr_share'); if(sh) sh.onclick=async()=>{const t=txt(); try{if(navigator.share){await navigator.share({text:t});return}}catch(e){if(e.name==='AbortError')return} try{await navigator.clipboard.writeText(t);($('#cr_msg')||sh).textContent='Texte copié : collez-le dans WhatsApp ou un SMS.'}catch(e){alert(t)}};
+  const sb=$('#cr_send'); if(sb) sb.onclick=async()=>{
+    const comp=$('#cr_rc').value.trim().slice(0,80); rec.comp=comp; const msg=$('#cr_msg'); sb.disabled=true; let ok=0, ko='';
+    for(const [i,x] of rec.sw.entries()){ const cb=document.querySelector(`[data-crsend="${i}"]`); if(x.sent||!cb||!cb.checked) continue;
+      msg.textContent=`Envoi ${x.name}…`;
+      try{await chrSend({sid:x.id,ev:rec.ev,pool:rec.pool,lap:rec.lap,t:x.sp[x.sp.length-1],sp:x.sp,date:rec.date,comp,by:who}); x.sent=true; ok++}catch(e){ko=e.message}}
+    const H=crHist().map(h=>h.ts===rec.ts?rec:h); ls.set('chrono_races',JSON.stringify(H));
+    if(ko){msg.innerHTML=`<span style="color:var(--rope)">Échec de l’envoi : ${esc(ko)}. Vérifiez le réseau et réessayez.</span>`; sb.disabled=false}
+    else {CHR=null; crResults(rec); const m=$('#cr_msg'); if(m) m.textContent=''; }
+  };
+  wire();
+}
+
+/* ---- stockage partagé (Cloudinary : image 1 px + métadonnées) ---- */
+const CR_PX='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+const crClean=v=>String(v??'').replace(/[|=]/g,' ');
+async function cldPost(tags,ctx){
+  const fd=new FormData(); fd.append('file',CR_PX); fd.append('upload_preset',CLD_PRESET); fd.append('tags',tags);
+  fd.append('context',Object.entries(ctx).map(([k,v])=>k+'='+crClean(v)).join('|'));
+  let last; for(let k=0;k<3;k++){try{const ctl=new AbortController(),to=setTimeout(()=>ctl.abort(),30000);
+    const r=await fetch(`https://api.cloudinary.com/v1_1/${CLD_CLOUD}/image/upload`,{method:'POST',body:fd,signal:ctl.signal}); clearTimeout(to);
+    const j=await r.json().catch(()=>({})); if(!r.ok) throw new Error((j.error&&j.error.message)||('erreur '+r.status)); return j}catch(e){last=e; await new Promise(r=>setTimeout(r,1500))}}
+  throw last;
+}
+async function chrSend(o){
+  const id=Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+  await cldPost(CR_TAG,{k:id,sid:o.sid,ev:o.ev,pool:o.pool,lap:o.lap,t:o.t,sp:o.sp.join(';'),date:o.date,comp:o.comp,by:o.by});
+  if(CHR) CHR.unshift({k:id,...o});
+}
+async function chrLoad(){
+  const get=async tag=>{const r=await fetch(`https://res.cloudinary.com/${CLD_CLOUD}/image/list/${tag}.json?t=${Date.now()}`,{cache:'no-store'}); if(r.status===404) return []; if(!r.ok) throw new Error('HTTP '+r.status); return (await r.json()).resources||[]};
+  try{const [a,d]=await Promise.all([get(CR_TAG),get(CR_TAG+'_del').catch(()=>[])]);
+    const del=new Set(d.map(r=>r.context&&r.context.custom&&r.context.custom.del).filter(Boolean));
+    const loc=JSON.parse(ls.get('chr_del')||'[]'); loc.forEach(k=>del.add(k));
+    CHR=a.map(r=>{const c=(r.context&&r.context.custom)||{};return {k:c.k,sid:c.sid,ev:c.ev,pool:+c.pool,lap:+c.lap,t:+c.t,sp:(c.sp||'').split(';').map(Number).filter(x=>x>0),date:c.date,comp:c.comp||'',by:c.by||''}}).filter(x=>x.k&&x.sid&&!del.has(x.k)).sort((a,b)=>a.date<b.date?1:a.date>b.date?-1:0);
+    CHR_ERR='';
+  }catch(e){CHR_ERR='Chronos du club indisponibles (réseau ?).'; if(!CHR) CHR=[]}
+}
+async function chrDelete(k){
+  await cldPost(CR_TAG+'_del',{del:k});
+  const loc=JSON.parse(ls.get('chr_del')||'[]'); loc.push(k); ls.set('chr_del',JSON.stringify(loc.slice(-200)));
+  if(CHR) CHR=CHR.filter(x=>x.k!==k);
+}
+function chrFicheHTML(s){return `<div class="panel" id="chrBox" data-sid="${s.id}"><h3>Chronos du club</h3><p class="small muted" style="margin-top:0">Temps pris à la main par les membres du club en compétition, avec les temps de passage.</p><div id="chrList"><p class="small muted">Chargement…</p></div><div class="row" style="margin-top:8px"><button class="btn ghost" data-go="chrono">⏱ Chronométrer une course</button></div></div>`}
+function chrRender(s){
+  const el=$('#chrList'); if(!el||!CHR) return; const L=CHR.filter(x=>x.sid===s.id);
+  el.innerHTML=(CHR_ERR?`<p class="small" style="color:var(--rope)">${CHR_ERR}</p>`:'')+(L.length?`<div style="display:flex;flex-direction:column;gap:8px">${L.map(x=>{const pb=bestOf(s.id,x.ev,x.pool);return `<details style="background:var(--sunk);border-radius:10px;padding:8px 10px"><summary style="cursor:pointer;display:flex;justify-content:space-between;gap:8px;align-items:baseline"><span><b>${EVL[x.ev]||x.ev}</b> <span class="small muted">· ${fdate(x.date)} · ${x.pool} m</span></span><b class="t">${fmt(x.t)}</b></summary>
+    <div class="small muted" style="margin:6px 0">${x.comp?esc(x.comp)+' · ':''}chrono manuel${x.by?' de '+esc(x.by):''}${pb?` · record perso officiel ${fmt(pb.t)} (${fmtGap(x.t-pb.t)})`:''}</div>
+    ${x.sp.length>1?crSplitsHTML(x.sp,x.lap):''}<div class="row" style="margin-top:6px"><button class="tlink" data-chrdel="${x.k}" style="color:var(--rope)">Supprimer ce chrono</button></div></details>`}).join('')}</div>`:'<p class="small muted" style="margin:0">Aucun chrono pour l’instant.</p>');
+  el.querySelectorAll('[data-chrdel]').forEach(b=>b.onclick=async()=>{if(!confirm('Supprimer ce chrono pour tout le club ?')) return; b.disabled=true; b.textContent='Suppression…'; try{await chrDelete(b.dataset.chrdel); chrRender(s)}catch(e){b.disabled=false; b.textContent='Échec, réessayer'}});
+}
+function chrWire(s){ if(CHR) chrRender(s); chrLoad().then(()=>{const b=$('#chrBox'); if(b&&b.dataset.sid===s.id) chrRender(s)}) }
 
 function route(tok){
   tok=tok||'nageurs'; let tab=tok;
   if(tok.startsWith('s')&&S.sw[tok.slice(1)]){viewFiche(tok.slice(1)); tab=tok.slice(1)===me()?'moi':'nageurs'}
   else if(tok.startsWith('p')&&S.perfs[tok.slice(1)]){viewPerf(tok.slice(1)); tab=S.perfs[tok.slice(1)].sid===me()?'moi':'nageurs'}
-  else if(tok==='moi') viewMoi(); else if(tok==='zones'){viewZones(); tab='entr'} else if(tok==='entr') viewEntr(); else if(tok==='chrono'){viewChrono(); tab='entr'} else if(tok==='grilles'){viewClub('grilles'); tab='club'}
+  else if(tok==='moi') viewMoi(); else if(tok==='zones'){viewZones(); tab='entr'} else if(tok==='entr') viewEntr(); else if(tok==='chrono'){viewChronoCourse(); tab='chrono'} else if(tok==='series'){viewChrono(); tab='chrono'} else if(tok==='grilles'){viewClub('grilles'); tab='club'}
   else if(tok==='club'||tok.startsWith('club-')){viewClub(tok.slice(5)); tab='club'}
   else if(tok.startsWith('cmp-')){viewCmp(tok.slice(4)); tab='nageurs'}
   else if(tok.startsWith('prog-')){viewProg(tok.slice(5)); tab=tok.slice(5)===me()?'entr':'nageurs'}
