@@ -895,7 +895,6 @@ function viewEntr(){
     <p class="small" style="margin:0 0 10px">${myPh.lab}${myPh.comp?` · ${myPh.weeks} semaine${myPh.weeks>1?'s':''} avant « ${esc(myPh.comp.t)} »`:''} · ${myPr.sess} séances de ${myPr.dur} min</p>
     <div class="row"><button class="btn" data-go="prog-${s.id}">Voir mes séances de la semaine</button><button class="btn ghost" data-go="prof-${s.id}">Réglages</button></div></div>`
   :`<div class="hint"><span>Indiquez « C’est moi » sur votre fiche pour obtenir un <b>programme personnalisé</b> selon votre spécialité et vos temps.</span></div>`}
-  <div class="panel"><div class="row" style="justify-content:space-between;align-items:center;gap:10px"><div style="min-width:0"><h2 style="margin:0">⏱ Chrono de séries</h2><p class="small muted" style="margin:2px 0 0">Départs automatiques avec bips, allure cible, jusqu’à 8 nageurs, analyse de la régularité.</p></div><button class="btn" data-go="series">Ouvrir</button></div></div>
   <div class="panel"><h2>Séance libre</h2>
     <div class="form"><label for="sc">Allure CSS /100 m${cs?` <span class="muted" style="font-weight:400">(votre test)</span>`:''}${TIN('sc',cssPace,false)}</label>
     <label for="st">Objectif${selHTML('st',Object.entries(SETS).map(([k,v])=>[k,v.lab]),pref('ses_type','z4'),'Objectif')}</label>
