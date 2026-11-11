@@ -1906,6 +1906,7 @@ if('serviceWorker' in navigator) window.addEventListener('load',()=>navigator.se
 const CH_MAX=8;
 let CH=null; // séance en cours
 const chHist=()=>{try{return JSON.parse(ls.get('chrono_hist')||'[]')}catch(e){return []}};
+const chDel=ts=>ls.set('chrono_hist',JSON.stringify(chHist().filter(h=>h.ts!==ts)));
 const chZoneLab=z=>z==='0'?'Sans allure cible':z==='6'?'Sprint (allure max)':`Z${z} · ${ZONES[z-1].name}`;
 function chCssOf(id){const s=S.sw[id]; if(!s) return null; try{return persoPaces(s,getProf(s)).css}catch(e){return null}}
 function chTarget(css,z,d){ // {t, fast, slow} en secondes pour d mètres
@@ -1944,7 +1945,7 @@ function viewChrono(){
     <div id="ch_prev" class="small" style="margin-top:10px"></div>
     <div class="row" style="margin-top:12px"><button class="btn" id="ch_go" style="font-size:1.05rem;padding:12px 22px">▶ Démarrer (compte à rebours 10 s)</button></div>
     <p class="note" style="margin-top:10px">Pendant la série : touchez le bouton d’un nageur à son arrivée. L’écran reste allumé. La CSS est remplie avec le test du nageur ou estimée d’après ses meilleurs temps ; modifiable.</p></div>
-  ${H.length?`<div class="panel"><h3>Séries enregistrées sur ce téléphone</h3><div style="display:flex;flex-direction:column">${H.slice(0,15).map((h,i)=>`<button class="item" data-hist="${i}" style="text-align:left"><div style="min-width:0"><b>${h.n} × ${h.d} m</b> <span class="small muted">· ${fdate(h.date)} · ${h.sw.map(x=>esc(x.name)).join(', ')}</span></div></button>`).join('')}</div></div>`:''}
+  ${H.length?`<div class="panel"><h3>Séries enregistrées sur ce téléphone</h3><div style="display:flex;flex-direction:column">${H.map((h,i)=>`<div style="display:flex;align-items:stretch;gap:6px"><button class="item" data-hist="${i}" style="text-align:left;flex:1;min-width:0"><div style="min-width:0"><b>${h.n} × ${h.d} m</b> <span class="small muted">· ${fdate(h.date)} · ${h.sw.map(x=>esc(x.name)).join(', ')}</span></div></button><button class="btn ghost" data-hdel="${h.ts}" aria-label="Supprimer la série du ${fdate(h.date)}" style="padding:6px 12px;align-self:center">🗑</button></div>`).join('')}</div>${H.length>1?`<div class="row" style="margin-top:10px"><button class="btn ghost" id="ch_hclr" style="color:var(--rope);border-color:var(--rope)">Tout supprimer (${H.length})</button></div>`:''}</div>`:''}
   </div>`;
   const read=()=>[...document.querySelectorAll('.chrow')].map((el,i)=>{const id=el.querySelector('[data-k=id]').value;return {id,name:id&&S.sw[id]?swName(S.sw[id]):(el.querySelector('[data-k=name]')||{value:''}).value.trim()||('Nageur '+(i+1)),css:parseT($('#chcss'+i).value)||null}});
   const save=r=>ls.set('chrono_rows',JSON.stringify(r));
@@ -1956,6 +1957,8 @@ function viewChrono(){
   document.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{const r=read();r.splice(+b.dataset.del,1);save(r);viewChrono()});
   $('#ch_add').onclick=()=>{const r=read();if(r.length<CH_MAX){r.push({id:'',name:'',css:r[r.length-1]?.css||105});save(r);viewChrono()}};
   document.querySelectorAll('[data-hist]').forEach(b=>b.onclick=()=>chResults(chHist()[+b.dataset.hist],true));
+  document.querySelectorAll('[data-hdel]').forEach(b=>b.onclick=()=>{const ts=+b.dataset.hdel,h=chHist().find(x=>x.ts===ts);if(h&&confirm(`Supprimer la série ${h.n} × ${h.d} m du ${fdate(h.date)} ? Action définitive.`)){chDel(ts);viewChrono()}});
+  const hc=$('#ch_hclr'); if(hc) hc.onclick=()=>{if(confirm(`Supprimer les ${chHist().length} séries enregistrées ? Action définitive.`)){ls.del('chrono_hist');viewChrono()}};
   $('#ch_go').onclick=()=>{
     const r=read(), n=Math.max(1,Math.min(60,+$('#ch_n').value||1)), d=+$('#ch_d').value, m=$('#ch_m').value, cyc=parseT($('#ch_c').value), rest=Math.max(0,+$('#ch_r').value||0), z=$('#ch_z').value, gap=+$('#ch_g').value;
     if(m==='cyc'&&!(cyc>5)){alert('Indiquez le départ (ex. 1:45).');return}
@@ -2069,7 +2072,8 @@ function chResults(rec,fromHist){
     <ul style="margin:8px 0 0;padding-left:18px">${A.msg.map(m=>`<li class="small" style="margin:3px 0">${m}</li>`).join('')}${A.cmp?`<li class="small" style="margin:3px 0">Même série le ${fdate(A.cmp.date)} : moyenne ${fmt(A.cmp.avg,1)} → <b>${fmt(A.avg,1)}</b> (<b style="color:${A.cmp.gain<=0?'#1d9e5a':'#d9472f'}">${fmtGap(A.cmp.gain)}</b>).</li>`:''}</ul></div>`}).join('')
   :'<div class="empty"><b>Aucun temps enregistré</b></div>'}
   <p class="note" style="margin-top:10px">Couleurs : <b style="color:#1d9e5a">dans la zone</b> · <b style="color:#d9472f">trop rapide</b> · <b style="color:#e0a21b">trop lent</b>. Temps pris au toucher : comptez ± 0,2 s.${fromHist?'':' Série enregistrée sur ce téléphone.'}</p></div>
-  <div class="row"><button class="btn" data-go="chrono">Nouvelle série</button></div></div>`;
+  <div class="row"><button class="btn" data-go="chrono">Nouvelle série</button>${chHist().some(h=>h.ts===rec.ts)?`<button class="btn ghost" id="ch_rdel" style="color:var(--rope);border-color:var(--rope)">🗑 Supprimer cette série</button>`:''}</div></div>`;
+  const rd=$('#ch_rdel'); if(rd) rd.onclick=()=>{if(confirm('Supprimer cette série ? Action définitive.')){chDel(rec.ts);go('chrono')}};
   window.scrollTo(0,0); wire();
 }
 
