@@ -56,8 +56,11 @@ if (pa) { const D = dom(pa);
     ag.push({ src: 'Paris Aquatique', t: t.replace(/\s*\((FFN|WORLD AQUATICS MASTERS)\)\s*/i, ' ').trim(), d, d2: d2 && d2 !== d ? d2 : null, l: tc(city) }); } }
 for (const a of ag) {
   if (a.d < t0) continue;
-  const ex = CAL.find(e => e.d === a.d && (sameEv(e, a.d, a.l) || N(e.t).split(' ').filter(w => w.length > 4).some(w => N(a.t).includes(w)) && e.d === a.d));
-  if (ex) { if (/a definir|a paraitre|date et lieu/.test(N(ex.l)) && a.l) { log.push(`lieu précisé : ${ex.t} → ${a.l} (${a.src})`); ex.l = a.l; } continue; }
+  const near = e => e.d && Math.abs(new Date(e.d) - new Date(a.d)) <= 3 * 864e5;
+  const words = t => N(t).split(' ').filter(w => w.length > 3 && !/^(championnats?|maitres?|open|meeting|des|les)$/.test(w));
+  const ex = CAL.find(e => (e.d === a.d && sameEv(e, a.d, a.l)) || (near(e) && (cityKey(e.l) === cityKey(a.l) || words(e.t).filter(w => words(a.t).includes(w)).length >= 2 || (e.k === 'nat' && /france/i.test(a.t) && ((/n1/.test(N(e.t)) && /n1/.test(N(a.t))) || (/n2/.test(N(e.t)) && /n2/.test(N(a.t))) || (/relais/.test(N(e.t)) && /relais/.test(N(a.t))))))));
+  const undef = x => /a definir|a paraitre|date et lieu/.test(N(x));
+  if (ex) { if (undef(ex.l) && a.l && !undef(a.l)) { log.push(`lieu précisé : ${ex.t} → ${a.l} (${a.src})`); ex.l = a.l; } continue; }
   const k = /france/i.test(a.t) ? 'nat' : /monde|world|europe|international/i.test(a.t) ? 'int' : meets.some(m => m.d === a.d && cityKey(m.l) === cityKey(a.l)) ? 'meet' : 'idf';
   CAL.push({ d: a.d, ...(a.d2 ? { d2: a.d2 } : {}), k, t: a.t, l: a.l, b: null, n: `Source : ${a.src}.` }); log.push(`ajouté : ${a.t} · ${a.d} · ${a.l} (${a.src})`);
 }
@@ -68,6 +71,7 @@ const pages = ['competitions.php?idact=mtr'];
 const rh = await get(X + pages[0]);
 if (rh) { const sai = (rh.match(/idsai=(\d{4})/g) || []).map(x => +x.slice(6)); const cur = new Date().getMonth() >= 8 ? new Date().getFullYear() + 1 : new Date().getFullYear();
   pages.push(`competitions.php?idact=mtr&idsai=${cur}&idreg=1592`); }
+const SEASON0 = `${new Date().getMonth() >= 8 ? new Date().getFullYear() : new Date().getFullYear() - 1}-09-01`;
 const done = new Set();
 for (let i = 0; i < pages.length; i++) { const u = pages[i]; if (done.has(u)) continue; done.add(u);
   const h = i === 0 && rh ? rh : await get(X + u); if (!h) continue; const idf = /idreg=1592/.test(u);
@@ -78,7 +82,7 @@ for (let i = 0; i < pages.length; i++) { const u = pages[i]; if (done.has(u)) co
     let el = a; for (let k = 0; k < 8 && el && !/Type de compétition/.test(el.textContent); k++) el = el.parentElement; if (!el) continue;
     const tx = txt(el);
     const m = tx.match(/^\S+ (\d\d)\/(\d\d)(?:\/(\d\d))?(?: - \S+ (\d\d)\/(\d\d)\/(\d\d))? .*?(International|National|Interrégional|Régional|Départemental) \S+ (.+?) - ([^-]+?) \((\w+)\) Titre original : (.+?) Type de compétition/);
-    if (!m) continue; const y = '20' + (m[3] || m[6]);
+    if (!m) continue; const y = '20' + (m[3] || m[6]); if (`${y}-${m[2]}-${m[1]}` < SEASON0) continue;
     const t = m[8].replace(/ - ([A-ZÀ-Ü' -]+)$/, (x, r) => ' - ' + tc(r));
     RES.push({ id, d: `${y}-${m[2]}-${m[1]}`, d2: m[4] ? `20${m[6]}-${m[5]}-${m[4]}` : null, niv: m[7], t, l: tc(m[9].trim()), orig: m[11], reg: idf || /ILE-DE-FRANCE|ESSONNE|PARIS|YVELINES|HAUTS-DE-SEINE|SEINE-SAINT-DENIS|VAL-DE-MARNE|VAL-D'OISE|SEINE-ET-MARNE/i.test(m[8]) ? 'IDF' : '' });
     seen.add(id); log.push(`résultats publiés : ${m[11]} (${tc(m[9].trim())})`);
