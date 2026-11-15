@@ -21,7 +21,8 @@ async function perfsOfIuf(iuf) {
         const L = [...s.querySelectorAll('tr')].map(r => [...r.querySelectorAll('td')].map(txt)).filter(c => c.length > 1).map(c => [parseInt(c[0]), sec(c[1])]);
         if (L.length > 1 && Math.abs(L[L.length - 1][1] - t) < 0.005) { lap = L[1][0] - L[0][0]; sp = L.slice(0, -1).map(x => x[1]); } }
       const city = txt(tds[3].querySelector('p') || tds[3]);
-      rows.push({ p: [pool, ev, t, `${dt[2]}-${dt[1]}-${dt[0]}`, parseInt(txt(tds[2])) || 0, txt(tds[5]).replace(/[\[\]]/g, ''), city, /mtr/i.test(txt(tds[8] || null)) ? 1 : 0, lap, sp], club: txt(tds[7]) });
+      const lk = tr.querySelector('a[href*="idcpt="]'); const cpt = lk ? (lk.getAttribute('href').match(/idcpt=(\d+)/) || [])[1] || '' : '';
+      rows.push({ p: [pool, ev, t, `${dt[2]}-${dt[1]}-${dt[0]}`, parseInt(txt(tds[2])) || 0, txt(tds[5]).replace(/[\[\]]/g, ''), city, /mtr/i.test(txt(tds[8] || null)) ? 1 : 0, lap, sp, cpt], club: txt(tds[7]) });
     }
   }
   return rows;
@@ -31,7 +32,8 @@ let html = readApp();
 const DATA = getConst(html, 'DATA'), G = getConst(html, 'G'), Y = getConst(html, 'REF_YEAR');
 let REC; try { REC = getConst(html, 'CLUB_REC'); } catch (e) { REC = null; }
 const key = p => [p[1], p[0], p[2], p[3]].join('|');
-const msgs = []; let added = 0, failed = 0;
+const msgs = []; let added = 0, failed = 0, touched = 0;
+let COMPS; try { COMPS = getConst(html, 'COMPS') || {}; } catch (e) { COMPS = null; }
 
 for (const sw of DATA.sw.slice(0, +process.env.LIMIT || undefined)) {
   if (!/^\d+$/.test(sw.iuf)) {   // nageur sans fiche extraNat : on la cherche par le nom
@@ -45,7 +47,8 @@ for (const sw of DATA.sw.slice(0, +process.env.LIMIT || undefined)) {
     const rows = await perfsOfIuf(iuf); if (!rows) { failed++; continue; }
     if (process.env.DRY) console.log(sw.nom, iuf, 'lignes extraNat', rows.length, 'dont passages', rows.filter(r => r.p[9].length).length, JSON.stringify(rows[0] && rows[0].p));
     for (const r of rows) {
-      const k = key(r.p); if (have.has(k)) continue;
+      const k = key(r.p);
+      if (have.has(k)) { const ex = sw.p.find(p => key(p) === k); if (ex && r.p[10] && ex[10] !== r.p[10]) { ex[10] = r.p[10]; touched++; } continue; }
       const y = +r.p[3].slice(0, 4);
       if (y < 2016) {             // avant 2016 : seulement si meilleur que tout ce qu'on a
         const bs = sw.p.filter(p => p[1] === r.p[1] && +p[0] === +r.p[0]).map(p => p[2]);
@@ -81,11 +84,23 @@ for (const sw of DATA.sw.slice(0, +process.env.LIMIT || undefined)) {
   console.log(name, '+', fresh.length);
 }
 
-console.log('nouvelles performances :', added, '· échecs :', failed);
+let titled = 0;
+if (COMPS) {
+  const need = new Map(); for (const sw of DATA.sw) for (const p of sw.p) if (p[10] && !(p[10] in COMPS) && (!need.has(p[10]) || need.get(p[10]) < p[3])) need.set(p[10], p[3]);
+  const todo = [...need.entries()].sort((a, b) => a[1] < b[1] ? 1 : -1).slice(0, +process.env.MAX_TITLES || 300);
+  for (const [id] of todo) {
+    const h = await get(`${X}resultats.php?idact=nat&idcpt=${id}`); if (!h) continue;
+    const t = txt(dom(h).body); const m = t.match(/Titre original : (.+?) Type de compétition/) || t.match(/Les Résultats .*?([^.]{5,120}?) \(FRA\)/);
+    COMPS[id] = m ? m[1].trim() : ''; titled++;
+  }
+  console.log('titres de compétitions ajoutés :', titled, '· restants :', need.size - titled);
+}
+console.log('nouvelles performances :', added, '· idcpt complétés :', touched, '· échecs :', failed);
 if (failed > (+process.env.LIMIT || DATA.sw.length) / 2) { console.log('extraNat inaccessible : rien n’est publié'); process.exit(1); }
 if (process.env.DRY) process.exit(0);
-if (added) {
-  DATA.maj = today(); html = setConst(html, 'DATA', DATA);
+if (added || touched || titled) {
+  if (added) DATA.maj = today(); html = setConst(html, 'DATA', DATA);
+  if (COMPS && titled) html = setConst(html, 'COMPS', COMPS);
   if (REC) { REC.maj = today(); html = setConst(html, 'CLUB_REC', REC); }
   saveApp(html);
 }
