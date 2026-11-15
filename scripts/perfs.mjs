@@ -43,6 +43,7 @@ for (const sw of DATA.sw.slice(0, +process.env.LIMIT || undefined)) {
   const have = new Set(sw.p.map(key)); const fresh = [];
   for (const iuf of [sw.iuf, ...(EXTRA[sw.iuf] || [])]) {
     const rows = await perfsOfIuf(iuf); if (!rows) { failed++; continue; }
+    if (process.env.DRY) console.log(sw.nom, iuf, 'lignes extraNat', rows.length, 'dont passages', rows.filter(r => r.p[9].length).length, JSON.stringify(rows[0] && rows[0].p));
     for (const r of rows) {
       const k = key(r.p); if (have.has(k)) continue;
       const y = +r.p[3].slice(0, 4);

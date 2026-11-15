@@ -28,12 +28,12 @@ export const today = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'E
 // Lecture / écriture des déclarations `const X = ...;` (une ligne) d'index.html
 export function readApp() { return fs.readFileSync(ROOT + 'index.html', 'utf8'); }
 export function getConst(html, name) {
-  const m = html.match(new RegExp(`^const ${name} = (.*);\\s*$`, 'm'));
+  const m = html.match(new RegExp(`^const ${name} = (.*)$`, 'm'));
   if (!m) throw new Error('déclaration introuvable : ' + name);
-  return JSON.parse(m[1]);
+  return JSON.parse(m[1].trim().replace(/;$/, ''));
 }
 export function setConst(html, name, val) {
-  const re = new RegExp(`^const ${name} = .*;\\s*$`, 'm');
+  const re = new RegExp(`^const ${name} = .*$`, 'm');
   if (!re.test(html)) throw new Error('déclaration introuvable : ' + name);
   return html.replace(re, () => `const ${name} = ${JSON.stringify(val)};`);
 }
