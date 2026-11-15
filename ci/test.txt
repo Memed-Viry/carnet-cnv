@@ -1,0 +1,28 @@
+== perfs (3 nageurs, à blanc)
+nouvelles performances : 0 · échecs : 0
+== weekend (Fougères 94319)
+file:///home/runner/work/carnet-cnv/carnet-cnv/scripts/lib.mjs:32
+  if (!m) throw new Error('déclaration introuvable : ' + name);
+                ^
+
+Error: déclaration introuvable : WEEKEND
+    at getConst (file:///home/runner/work/carnet-cnv/carnet-cnv/scripts/lib.mjs:32:17)
+    at file:///home/runner/work/carnet-cnv/carnet-cnv/scripts/weekend.mjs:8:44
+    at ModuleJob.run (node:internal/modules/esm/module_job:325:25)
+    at async ModuleLoader.import (node:internal/modules/esm/loader:606:24)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
+
+Node.js v20.20.2
+== live (Interclubs Maîtres 92617)
+file:///home/runner/work/carnet-cnv/carnet-cnv/scripts/lib.mjs:32
+  if (!m) throw new Error('déclaration introuvable : ' + name);
+                ^
+
+Error: déclaration introuvable : WEEKEND
+    at getConst (file:///home/runner/work/carnet-cnv/carnet-cnv/scripts/lib.mjs:32:17)
+    at file:///home/runner/work/carnet-cnv/carnet-cnv/scripts/live.mjs:8:43
+    at ModuleJob.run (node:internal/modules/esm/module_job:325:25)
+    at async ModuleLoader.import (node:internal/modules/esm/loader:606:24)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
+
+Node.js v20.20.2
