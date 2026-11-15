@@ -44,8 +44,8 @@ for (const id of ids) {
       if (!seen.has(k) && rec.t && !relay) {
         const ev = LAB2EV(lab), pb = ev ? best(sw, ev, wc.b || 25) : null;
         const tag = pb == null ? 'première course' : rec.t < pb ? `RECORD PERSO (−${(pb - rec.t).toFixed(2)} s)` : `record perso ${fmt(pb)}`;
-        notes.push([topicOf(sw.iuf), `${lab.replace(/ (Messieurs|Dames|Mixtes?)/, '')} : ${fmt(rec.t)}`, `${sw.prenom} ${sw.nom} · ${place} · ${tag}${pts ? ' · ' + pts + ' pts' : ''}\n${wc.t}`, rec.t < (pb || 0) ? 'trophy' : 'stopwatch']);
-        notes.push([TOPIC_CLUB, `${sw.prenom} ${sw.nom} : ${lab.replace(/ (Messieurs|Dames|Mixtes?)/, '')} ${fmt(rec.t)}`, `${place} · ${tag} · ${wc.t}`, rec.t < (pb || 0) ? 'trophy' : 'stopwatch']);
+        notes.push([topicOf(sw.iuf), `${lab.replace(/ Séries$/, '')} : ${fmt(rec.t)}`, `${sw.prenom} ${sw.nom} · ${place} · ${tag}${pts ? ' · ' + pts + ' pts' : ''}\n${wc.t}`, rec.t < (pb || 0) ? 'trophy' : 'stopwatch']);
+        notes.push([TOPIC_CLUB, `${sw.prenom} ${sw.nom} : ${lab.replace(/ Séries$/, '')} ${fmt(rec.t)}`, `${place} · ${tag} · ${wc.t}`, rec.t < (pb || 0) ? 'trophy' : 'stopwatch']);
       }
     }
   }
