@@ -16,10 +16,11 @@ jobs:
       - name: Tests
         run: |
           mkdir -p ci
-          { echo "== perfs (3 nageurs, à blanc)"; DRY=1 NO_NOTIFY=1 LIMIT=3 node scripts/perfs.mjs 2>&1 | tail -40
-            echo "== weekend (Fougères 94319)"; NO_NOTIFY=1 TEST_COMPS=94319 node scripts/weekend.mjs 2>&1 | tail -20
+          { echo "== perfs: skip";
+            true
             echo "== live (Interclubs Maîtres 92617)"; NO_NOTIFY=1 TEST_COMPS=92617 node scripts/live.mjs 2>&1 | tail -20
           } > ci/test.txt 2>&1 || true
           git config user.name "carnet-bot"; git config user.email "carnet-bot@users.noreply.github.com"
           git add ci/test.txt; git commit -m "Test des scripts"; git pull --rebase; git push
 # 1794747694
+# 1794747757

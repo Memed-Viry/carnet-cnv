@@ -28,12 +28,12 @@ for (const id of ids) {
     const h = await get(`${L}resultats.php?competition=${id}&langue=fra&go=detail&action=structure&structure=${st}`, { gap: 1000 }); if (!h) continue;
     const D = dom(h); let sw = null;
     for (const tr of D.querySelectorAll('tr')) {
-      const ind = tr.querySelector('.resStructureIndividu2');
+      const ind = tr.querySelector('[class^=resStructureIndividu]');
       if (ind) { const m = txt(ind).match(/^(.+?) \((\d{4})\)/); sw = null;
         if (m) { const nk = m[1].split(' '); for (let k = 1; k < nk.length && !sw; k++) sw = RK[norm(nk.slice(0, k).join(' ') + nk.slice(k).join(' ')) + m[2]] || null; } continue; }
       if (!sw || !tr.classList.contains('survol')) continue;
       const tds = [...tr.children]; const a = tds[1] && tds[1].querySelector('a'); if (!a) continue;
-      const lab = txt(a); const relay = /^\d+x/.test(lab); const tcell = tr.querySelector('td.temps'); if (!tcell) continue;
+      const lab = txt(a).replace(/ (Messieurs|Dames|Mixtes?)(?= |$)/, ''); const relay = /^\d+x/.test(lab); const tcell = tr.querySelector('td.temps'); if (!tcell) continue;
       const tA = tcell.querySelector('a') || tcell; const tStr = (tA.childNodes[0] ? tA.childNodes[0].textContent : txt(tcell)).trim();
       const t = sec(tStr); const place = txt(tr.querySelector('.resStructureDetailPlace'));
       const sp = [...tcell.querySelectorAll('td.split')].map(x => sec(txt(x)));
