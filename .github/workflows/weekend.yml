@@ -3,6 +3,8 @@ on:
   schedule:
     - cron: '47 16 * * *'
   workflow_dispatch:
+  push:
+    paths: ['.github/workflows/weekend.yml']
 permissions:
   contents: write
 concurrency:

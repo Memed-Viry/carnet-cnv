@@ -3,6 +3,8 @@ on:
   schedule:
     - cron: '23 5 * * *'
   workflow_dispatch:
+  push:
+    paths: ['.github/workflows/perfs.yml']
 permissions:
   contents: write
 concurrency:
