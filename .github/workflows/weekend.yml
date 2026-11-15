@@ -3,8 +3,6 @@ on:
   schedule:
     - cron: '47 16 * * *'
   workflow_dispatch:
-  push:
-    paths: ['.github/workflows/weekend.yml']
 permissions:
   contents: write
 concurrency:
@@ -15,9 +13,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 20 }
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with: { node-version: 24 }
       - run: npm install --no-audit --no-fund
       - run: node scripts/weekend.mjs
       - name: Publier si changement
