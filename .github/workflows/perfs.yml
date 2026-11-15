@@ -24,3 +24,11 @@ jobs:
           git config user.name "carnet-bot"; git config user.email "carnet-bot@users.noreply.github.com"
           git commit -am "Auto perfs $(TZ=Europe/Paris date '+%Y-%m-%d %H:%M')"
           for i in 1 2 3; do git pull --rebase -X theirs && git push && exit 0; sleep 5; done; exit 1
+      - name: Garder les tâches actives (GitHub les suspend après 60 jours sans activité)
+        run: |
+          git pull -q --rebase || true
+          last=$(git log -1 --format=%ct); now=$(date +%s)
+          if [ $(( (now-last)/86400 )) -ge 40 ]; then
+            git config user.name "carnet-bot"; git config user.email "carnet-bot@users.noreply.github.com"
+            git commit --allow-empty -m "Maintien des tâches automatiques" && git push
+          fi
