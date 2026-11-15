@@ -1,4 +1,4 @@
-name: Test agendas
+name: Test calendrier
 on:
   push:
     paths: ['.github/workflows/t.yml']
@@ -9,11 +9,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with: { node-version: 24 }
+      - run: npm install --no-audit --no-fund
       - run: |
-          mkdir -p ci
-          curl -sL -A "Mozilla/5.0" "https://www.parisaquatique.fr/events" -o ci/pa.html
-          curl -sL -A "Mozilla/5.0" "https://bbnatation.fr/agenda/liste/" -o ci/bb.html
-          curl -sL -A "Mozilla/5.0" "https://bbnatation.fr/agenda/liste/page/2/" -o ci/bb2.html
+          mkdir -p ci; DRY=1 node scripts/calendar.mjs > ci/cal.txt 2>&1 || true
           git config user.name carnet-bot; git config user.email carnet-bot@users.noreply.github.com
-          git add ci; git commit -m "Test agendas 2"; git pull --rebase; git push
-# 2
+          git add ci; git commit -m "Test calendrier"; git pull --rebase; git push
