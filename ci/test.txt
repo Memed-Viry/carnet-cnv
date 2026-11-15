@@ -1,28 +1,20 @@
 == perfs (3 nageurs, à blanc)
+DAVID 1004947 lignes extraNat 521 dont passages 310 [25,"50NL",33.17,"2025-11-22",1058,"NAT","CHERBOURG-EN-COTENTIN",1,0,[]]
+KABICHE 1016751 lignes extraNat 160 dont passages 120 [25,"50NL",29.31,"2024-11-23",1013,"NAT","CHERBOURG-EN-COTENTIN",1,0,[]]
+DANINTHE 1030128 lignes extraNat 410 dont passages 221 [25,"50NL",28.28,"2025-04-06",1068,"NAT","CHOLET",1,0,[]]
 nouvelles performances : 0 · échecs : 0
 == weekend (Fougères 94319)
-file:///home/runner/work/carnet-cnv/carnet-cnv/scripts/lib.mjs:32
-  if (!m) throw new Error('déclaration introuvable : ' + name);
-                ^
-
-Error: déclaration introuvable : WEEKEND
-    at getConst (file:///home/runner/work/carnet-cnv/carnet-cnv/scripts/lib.mjs:32:17)
-    at file:///home/runner/work/carnet-cnv/carnet-cnv/scripts/weekend.mjs:8:44
-    at ModuleJob.run (node:internal/modules/esm/module_job:325:25)
-    at async ModuleLoader.import (node:internal/modules/esm/loader:606:24)
-    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
-
-Node.js v20.20.2
+compétitions : TEST 94319 · nageurs : 1 
+{"maj":"2026-11-15","comps":[{"id":"94319","t":"TEST 94319","b":25,"l":"","d1":"2026-11-15","d2":"2026-11-15"}],"e":{"141157":[{"c":0,"lab":"10x50 Nage Libre Dames","relay":true,"rel":2,"s":3,"l":5,"et":"05:20.00","day":"Mercredi 11 Novembre","h":"09h18","heat":[[1,"DUSOUCHET Kate",1987],[2,"BROUARD Lisa",1988],[3,"BOUREL Justine",1998],[4,"TOURNY Océane",1992],[5,"LELONG Marie",1997],[6,"YANNOU Marlene",1996],[7,"BOIZUMAULT Maiwenn",2002],[8,"MOUNEREAU Albane",2005],[9,"MHUN Lena",2001],[10,"LEBRET Delphine",1998]]},{"c":0,"lab":"400 Nage Libre Dames","relay":false,"rel":0,"s":3,"l":1,"et":"05:04.27","day":"Mercredi 11 Novembre","h":"16h32","heat":[[1,"BROUARD Lisa",1988,"RENNES NATATION","05:04.27"],[2,"LAINE Alienor",1997,"CN FOUGÈRES","05:00.71"],[3,"GUEDEU-LEFEUVRE Ava",2007,"OLYMPIQUE CLUB CESSON-SÉVIGNÉ","04:46.48"],[4,"LARDIER-PUIGDOMENECH Julietta",2012,"C PAUL-BERT RENNES","04:50.65"],[5,"GOREL Edwige",2006,"C PAUL-BERT RENNES","05:01.69"],[6,"ISAMBARD Axelle",2012,"COMBOURG NATATION","05:21.14"]]}]}}
 == live (Interclubs Maîtres 92617)
-file:///home/runner/work/carnet-cnv/carnet-cnv/scripts/lib.mjs:32
-  if (!m) throw new Error('déclaration introuvable : ' + name);
-                ^
-
-Error: déclaration introuvable : WEEKEND
-    at getConst (file:///home/runner/work/carnet-cnv/carnet-cnv/scripts/lib.mjs:32:17)
-    at file:///home/runner/work/carnet-cnv/carnet-cnv/scripts/live.mjs:8:43
-    at ModuleJob.run (node:internal/modules/esm/module_job:325:25)
-    at async ModuleLoader.import (node:internal/modules/esm/loader:606:24)
-    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
-
-Node.js v20.20.2
+résultats : 79 · nouveaux : 24
+{"maj":"2026-11-15T13:02:12.242Z","comps":[{"id":"92617","t":"Compétition 92617","l":"","b":25}],"r":{"79989":[{"c":0,"lab":"100 Dos Mixtes Séries","relay":false,"place":"2e","t":81.83,"raw":"01:21.83","pts":792,"sp":[40.05]},{"c":0,"lab":"4x50 4 Nages Mixtes Séries","relay":true,"place":"13e","t":145.14,"raw":"02:25.14","pts":974,"sp":[37.2,76.93,111.02]},{"c":0,"lab":"10x50 Nage Libre Mixtes Séries","relay":true,"place":"27e","t":329.02,"raw":"05:29.02","pts":951,"sp":[31.08,63.25,97.88,132.6,167.76,201.39,231.08,264.03,297.79]},{"c":0,"lab":"200 4 Nages Mixtes Séries","relay":false,"place":"6e","t":174.89,"raw":"02:54.89","pts":836,"sp":[38.64,84.7,134.99]},{"c":0,"lab":"10x50 Nage Libre Mixtes Séries","relay":true,"place":"17e","t":307.83,"raw":"05:07.83","pts":1062,"sp":[28.02,59.05,90.5,120.36,151.81,184.91,214.4,243.02,277.54]},{"c":0,"lab":"10x50 Nage Libre Mixtes Séries","relay":true,"place":"6e","t":287.99,"raw":"04:47.99","pts":1107,"sp":[27.37,59.8,86.69,113.35,142.9,174.17,203.26,230.52,259.62]},{"c":0,"lab":"4x50 4 Nages Mixtes Séries","relay":true,"place":"2e","t":135.47,"raw":"02:15.47","pts":1200,"sp":[33.37,75.75,102.41]},{"c":0,"lab":"10x50 Nage Libre Mixtes Séries","relay":true,"place":"14e","t":300.2,"raw":"05:00.20","pts":1171,"sp":[26.26,55.21,85.81,110.99,143.94,176.98,201.74,229.67,259.34]},{"c":0,"lab":"10x50 Nage Libre Mixtes Séries","relay":true,"place":"6e","t":287.99,"raw":"04:47.99","pts":1107,"sp":[27.37,59.8,86.69,113.35,142.9,174.17,203.26,230.52,259.62]}],"80024":[{"c":0,"lab":"100 Papillon Mixtes Séries","relay":false,"place":"5e","t":82.43,"raw":"01:22.43","pts":779,"sp":[38.83]},{"c":0,"lab":"10x50 Nage Libre Mixtes Séries","relay":true,"place":"17e","t":307.83,"raw":"05:07.83","pts":1062,"sp":[28.02,59.05,90.5,120.36,151.81,184.91,214.4,243.02,277.54]}],"134057":[{"c":0,"lab":"100 Dos Mixtes Séries","relay":false,"place":"4e","t":84.88,"raw":"01:24.88","pts":918,"sp":[41.42]},{"c":0,"lab":"10x50 Nage Libre Mixtes Séries","relay":true,"place":"17e","t":307.83,"raw":"05:07.83","pts":1062,"sp":[28.02,59.05,90.5,120.36,151.81,184.91,214.4,243.02,277.54]},{"c":0,"lab":"4x50 4 Nages Mixtes Séries","relay":true,"place":"4e","t":134.24,"raw":"02:14.24","pts":1081,"sp":[35.63,73.58,103.58]},{"c":0,"lab":"10x50 Nage Libre Mixtes Séries","relay":true,"place":"17e","t":307.83,"raw":"05:07.83","pts":1062,"sp":[28.02,59.05,90.5,120.36,151.81,184.91,214.4,243.02,277.54]},{"c":0,"lab":"10x50 Nage Libre Mixtes Séries","relay":true,"place":"27e","t":329.02,"raw":"05:29.02","pts":951,"sp":[31.08,63.25,97.88,132.6,167.76,201.39,231.08,264.03,297.79]},{"c":0,"lab":"4x50 4 Nages Mixtes Séries","relay":true,"place":"13e","t":145.14,"raw":"02:25.14","pts":974,"sp":[37.2,76.93,111.02]},{"c":0,"lab":"10x50 Nage Libre Mixtes Séries","relay":true,"place":"27e","t":329.02,"raw":"05:29.02","pts":951,"sp":[31.08,63.25,97.88,132.6,167.76,201.39,231.08,264.03,297.79]}],"141157":[{"c":0,"lab":"100 Brasse Mixtes Séries","relay":false,"place":
+[notif] cnv-maitres-1347537 | 200 4 Nages Séries : 2:56.52 | Christine BEVING · 3e · record perso 2:48.06 · 1161 pts
+Compétition 92617 | stopwatch
+[notif] cnv-maitres-club | Christine BEVING : 200 4 Nages Séries 2:56.52 | 3e · record perso 2:48.06 · Compétition 92617 | stopwatch
+[notif] cnv-maitres-1347537 | 100 Dos Séries : 1:12.18 | Christine BEVING · 1er · RECORD PERSO (−7.52 s) · 1164 pts
+Compétition 92617 | trophy
+[notif] cnv-maitres-club | Christine BEVING : 100 Dos Séries 1:12.18 | 1er · RECORD PERSO (−7.52 s) · Compétition 92617 | trophy
+[notif] cnv-maitres-1347537 | 100 Brasse Séries : 1:37.99 | Christine BEVING · 1er · record perso 1:26.37 · 900 pts
+Compétition 92617 | stopwatch
+[notif] cnv-maitres-club | Christine BEVING : 100 Brasse Séries 1:37.99 | 1er · record perso 1:26.37 · Compétition 92617 | stopwatch
