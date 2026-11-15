@@ -63,16 +63,3 @@ export function qualLevels(sw, G, Y) {
   return out;
 }
 export const EVL = { '50NL': '50 NL', '100NL': '100 NL', '200NL': '200 NL', '400NL': '400 NL', '800NL': '800 NL', '1500NL': '1500 NL', '50D': '50 dos', '100D': '100 dos', '200D': '200 dos', '50B': '50 brasse', '100B': '100 brasse', '200B': '200 brasse', '50P': '50 pap.', '100P': '100 pap.', '200P': '200 pap.', '1004N': '100 4 nages', '2004N': '200 4 nages', '4004N': '400 4 nages' };
-
-// Notifications téléphone (ntfy.sh, gratuit, sans compte)
-export const TOPIC_CLUB = 'cnv-maitres-club';
-export const topicOf = iuf => 'cnv-maitres-' + iuf;
-const SITE = 'https://memed-viry.github.io/carnet-cnv/';
-export async function notify(topic, title, message, tags = '') {
-  if (process.env.NO_NOTIFY) { console.log('[notif]', topic, title, '|', message); return; }
-  try {
-    const r = await fetch('https://ntfy.sh/', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ topic, title, message, tags: tags ? tags.split(',') : [], click: SITE }) });
-    console.log('notif', topic, r.status, title);
-  } catch (e) { console.log('notif err', e.message); }
-}

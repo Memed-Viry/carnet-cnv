@@ -484,7 +484,6 @@ function viewFiche(id){
         <button class="btn ${isMe?'ghost':''}" id="meBtn" style="margin-left:auto;padding:7px 12px">${isMe?'✓ C’est moi':'C’est moi'}</button></div>
       ${c&&REF_YEAR>NOWY()?`<div class="small muted" style="margin-top:6px">La catégorie change chaque 1<sup>er</sup> janvier (âge atteint dans l’année). Qualifications et grilles ${REF_YEAR} calculées en ${c.label}.</div>`:''}<div class="small" style="margin-top:8px"><button class="btn" data-go="bilan${id}" style="padding:7px 12px;margin-right:10px">📊 Bilan de saison</button><a href="https://ffn.extranat.fr/webffn/nat_recherche.php?idact=nat&idrch_id=${s.iuf}" target="_blank" rel="noopener">Voir sur extraNat</a></div></div>
     ${chrFicheHTML(s)}
-    ${ntfyFicheHTML(s)}
     <div class="grid2">
       <div class="panel"><div class="chips" style="margin:0 0 8px">${[['q','Qualif. '+REF_YEAR],['top','Top temps · toutes années']].map(([k,l])=>`<button class="chip-f" data-bm="${k}" aria-pressed="${bestMode===k}">${l}</button>`).join('')}</div>${evs.length?(bestMode==='top'?`<h3>Top temps · toutes années</h3><div class="tbl-wrap"><table><thead><tr><th>Épreuve</th><th class="num">25 m</th><th class="num">50 m</th></tr></thead><tbody>${topRows}</tbody></table></div><p class="note" style="margin-top:8px">Meilleur temps de chaque épreuve toutes compétitions et toutes années confondues, avec le mois de la course. Touchez un temps pour l’analyser.</p>`
       :`<h3>Meilleurs temps · qualif. ${REF_YEAR}</h3>${evsQ.length?`<div class="tbl-wrap"><table><thead><tr><th>Épreuve</th><th class="num">25 m</th><th class="num">50 m</th><th>Qualif.</th></tr></thead><tbody>${bestRows}</tbody></table></div>`:'<p class="muted">Aucun temps retenu pour les qualifications '+REF_YEAR+'.</p>'}<p class="note" style="margin-top:8px">Uniquement les temps pris en compte pour les qualifications N1/N2 ${REF_YEAR} : compétitions Maîtres depuis le 1<sup>er</sup> janvier ${REF_YEAR-3}${catOf(s.annee,REF_YEAR)&&catOf(s.annee,REF_YEAR).k===0?' (et courses toutes catégories en C1)':''}. Touchez un temps pour l’analyser. « N2 +1.20 » = temps à gagner pour la grille N2.</p>`)+`<div style="border-top:1px solid var(--line);margin-top:12px;padding-top:10px"><div class="row" style="justify-content:space-between;align-items:center"><h3 style="margin:0">Meilleurs temps par année</h3><select id="bestYr" aria-label="Année">${yrs.map(y=>`<option value="${y}"${y===bestYr?' selected':''}>${y}</option>`).join('')}</select></div><div id="bestYrBody" style="margin-top:8px">${bestYearHTML(ps,bestYr,evs)}</div></div>`:'<div class="empty"><b>Aucune course</b></div>'}</div>
@@ -1904,8 +1903,7 @@ function clubWeekend(){
   $('#clubBody').innerHTML=`<div class="panel"><h2>Ce week-end</h2><p class="small muted" style="margin-top:0">Nageurs du club engagés en compétition dans les 8 prochains jours, d’après les listes de départ liveffn (relevé du ${WEEKEND.maj?fdate(WEEKEND.maj):'—'}).</p>
     ${ids.length?comps.map(ci=>{const c=WEEKEND.comps[ci];const sw=ids.filter(id=>wkRaces(id).some(r=>r.c==ci));return `<div style="margin-top:12px"><b>${esc(c.t)}</b><div class="small muted">${esc(c.l)} · ${c.d1===c.d2?fdate(c.d1):fdate(c.d1)+' au '+fdate(c.d2)}</div>
       <div style="display:flex;flex-direction:column;margin-top:6px">${sw.map(id=>{const s=S.sw[id],L=wkRaces(id).filter(r=>r.c==ci);return `<button class="item" data-sw="${id}" style="text-align:left"><div style="min-width:0"><b>${esc(swName(s))}</b><div class="small muted">${L.map(r=>(x=>`${esc(r.lab.replace(/ (Messieurs|Dames|Mixtes?)$/,''))} ${x&&x.t?`<b style="color:var(--accent)">→ ${fmt(x.t)} (${esc(x.place)})</b>`:r.h?'('+esc(r.h)+', c.'+(r.l||'?')+')':''}`)(liveOf(id,c.id,r.lab))).join(' · ')}</div></div></button>`}).join('')}</div></div>`}).join('')
-    :`<div class="empty"><b>Aucun nageur du club engagé</b>Aucune liste de départ liveffn ne contient de nageur Maître du club pour les 8 prochains jours.</div>`}${LIVE&&LIVE.maj?`<p class="note" style="margin-top:8px">${liveStamp()}</p>`:''}</div>
-    <details class="panel"><summary style="cursor:pointer;font-weight:700">🔔 Alertes du club sur votre téléphone</summary>${ntfyHTML(NTFY_CLUB,'les listes de départ publiées, les résultats en direct de tous les nageurs du club, les records du club et les nouvelles qualifications')}</details>`;
+    :`<div class="empty"><b>Aucun nageur du club engagé</b>Aucune liste de départ liveffn ne contient de nageur Maître du club pour les 8 prochains jours.</div>`}${LIVE&&LIVE.maj?`<p class="note" style="margin-top:8px">${liveStamp()}</p>`:''}</div>`;
   document.querySelectorAll('#clubBody [data-sw]').forEach(b=>b.onclick=()=>go('s'+b.dataset.sw));
 }
 
@@ -2272,7 +2270,6 @@ function chrRender(s){
 function chrWire(s){ if(CHR) chrRender(s); chrLoad().then(()=>{const b=$('#chrBox'); if(b&&b.dataset.sid===s.id) chrRender(s)}) }
 
 /* ================= DIRECT, NOTIFICATIONS, RECORDS DU CLUB, BILAN DE SAISON ================= */
-const NTFY_CLUB='cnv-maitres-club', ntfyTopic=iuf=>'cnv-maitres-'+iuf;
 const labBase=l=>String(l||'').replace(/ (Messieurs|Dames|Mixtes?)(?= |$)/,'').replace(/ (Séries|Finales?|Finale [A-Z]).*$/,'').trim();
 function liveOf(id,compId,lab){
   if(!LIVE||!LIVE.r||!LIVE.r[id]) return null;
@@ -2288,20 +2285,6 @@ function liveHTML(s,x,pool,relay){
     ${x.sp&&x.sp.length?`<div class="small muted t" style="margin-top:2px">Passages : ${x.sp.map(v=>fmt(v)).join(' · ')}</div>`:''}</div>`;
 }
 const liveStamp=()=>LIVE&&LIVE.maj?`Résultats liveffn relevés à ${new Date(LIVE.maj).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})} (toutes les 10 min environ).`:'';
-
-/* ---- Notifications (ntfy) ---- */
-function ntfyHTML(topic,who){
-  return `<div class="small" style="line-height:1.5">
-    <ol style="margin:4px 0 8px;padding-left:18px"><li>Installez l’appli gratuite <b>ntfy</b> (<a href="https://play.google.com/store/apps/details?id=io.heckel.ntfy" target="_blank" rel="noopener">Android</a> · <a href="https://apps.apple.com/app/ntfy/id1625396347" target="_blank" rel="noopener">iPhone</a>), sans compte.</li>
-    <li>Touchez <b>+</b> et abonnez-vous au sujet <b class="t" style="user-select:all">${topic}</b> (serveur ntfy.sh).</li></ol>
-    <div class="row"><button class="btn ghost" data-copy="${topic}">Copier le sujet</button><a class="btn ghost" href="ntfy://ntfy.sh/${topic}" style="text-decoration:none">Ouvrir dans ntfy</a><a class="btn ghost" href="https://ntfy.sh/${topic}" target="_blank" rel="noopener" style="text-decoration:none">Version web</a></div>
-    <p class="note" style="margin-top:8px">Vous recevrez ${who}. Les alertes sont publiques : n’importe qui connaissant le sujet peut les lire (ce sont des résultats déjà publics).</p></div>`;
-}
-document.addEventListener('click',async e=>{const b=e.target.closest&&e.target.closest('[data-copy]'); if(!b) return;
-  try{await navigator.clipboard.writeText(b.dataset.copy);b.textContent='Copié ✓'}catch(_){prompt('Sujet à copier :',b.dataset.copy)}});
-function ntfyFicheHTML(s){
-  return `<details class="panel"><summary style="cursor:pointer;font-weight:700">🔔 Recevoir les alertes de ${esc(s.prenom)}</summary>${ntfyHTML(ntfyTopic(s.iuf),`une notification quand ${esc(s.prenom)} est engagé${s.sexe==='F'?'e':''} en compétition, à chaque résultat le jour J, à chaque record perso, nouvelle qualification N1/N2 ou record du club`)}</details>`;
-}
 
 /* ---- Records du club : repérage dans les fiches ---- */
 let REC_KEYS=null;

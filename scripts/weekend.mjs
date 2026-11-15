@@ -1,5 +1,5 @@
 // Listes de départ liveffn des 8 prochains jours pour les nageurs suivis
-import { get, dom, txt, today, readApp, getConst, setConst, saveApp, notify, topicOf, TOPIC_CLUB } from './lib.mjs';
+import { get, dom, txt, today, readApp, getConst, setConst, saveApp } from './lib.mjs';
 const L = 'https://www.liveffn.com/cgi-bin/';
 const norm = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[^A-Z]/g, '');
 const lines = h => { const d = dom(h.replace(/<br\s*\/?>/gi, '\n').replace(/<\/(tr|p|div|td|h\d|li)>/gi, '$&\n')); return (d.body ? d.body.textContent : '').split('\n').map(s => s.replace(/\s+/g, ' ').trim()).filter(Boolean); };
@@ -60,7 +60,7 @@ for (const id of Object.keys(comps)) {
   }
   if (any) out.comps.push(comps[id]);
 }
-// notifications : nouvelles engagements par rapport au relevé précédent
+// comparaison avec le relevé précédent
 const oldKey = new Set(); for (const [iuf, L2] of Object.entries(OLD.e || {})) for (const r of L2) { const c = OLD.comps[r.c]; if (c) oldKey.add(iuf + c.id + r.lab); }
 const byName = Object.fromEntries(DATA.sw.map(s => [s.iuf, s]));
 const newBy = {};
@@ -70,8 +70,4 @@ console.log('compétitions :', out.comps.map(c => c.t).join(' | ') || 'aucune', 
 if (process.env.TEST_COMPS) { console.log(JSON.stringify(out).slice(0, 3000)); process.exit(0); }
 if (!same) {
   html = setConst(html, 'WEEKEND', out); saveApp(html);
-  for (const [iuf, L2] of Object.entries(newBy)) { const s = byName[iuf]; const c = out.comps[L2[0].c];
-    await notify(topicOf(iuf), `Engagé${s.sexe === 'F' ? 'e' : ''} : ${c.t}`, L2.map(r => `${r.lab.replace(/ (Messieurs|Dames|Mixtes?)$/, '')} · ${r.day || c.d1}${r.h ? ' ' + r.h : ''}${r.s ? ` · série ${r.s} couloir ${r.l}` : ''}`).join('\n'), 'calendar'); }
-  const n = Object.keys(newBy).length;
-  if (n) await notify(TOPIC_CLUB, `Listes de départ publiées`, out.comps.map(c => `${c.t} (${c.l}) : ${Object.entries(out.e).filter(([, L2]) => L2.some(r => out.comps[r.c] === c)).length} nageur(s) du club`).join('\n'), 'calendar');
 }

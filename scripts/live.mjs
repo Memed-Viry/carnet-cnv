@@ -1,5 +1,5 @@
 // Résultats en direct (liveffn) les jours de compétition des nageurs suivis
-import { get, dom, txt, sec, fmt, today, readApp, getConst, setConst, saveApp, notify, topicOf, TOPIC_CLUB, EVL } from './lib.mjs';
+import { get, dom, txt, sec, fmt, today, readApp, getConst, setConst, saveApp, EVL } from './lib.mjs';
 const L = 'https://www.liveffn.com/cgi-bin/';
 const norm = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().replace(/[^A-Z]/g, '');
 const LAB2EV = l => { const m = l.match(/^(\d+) (Nage Libre|Dos|Brasse|Papillon|4 Nages)/); return m ? m[1] + ({ 'Nage Libre': 'NL', 'Dos': 'D', 'Brasse': 'B', 'Papillon': 'P', '4 Nages': '4N' })[m[2]] : null; };
@@ -16,8 +16,6 @@ const best = (s, ev, pool) => { const L2 = s.p.filter(p => p[1] === ev && +p[0] 
 
 const keep = LIVE.comps && LIVE.comps.length && LIVE.comps.every(c => ids.includes(c.id)) ? LIVE : { maj: '', comps: [], r: {} };
 const out = { maj: new Date().toISOString(), comps: [], r: {} };
-const seen = new Set(); for (const [iuf, L2] of Object.entries(keep.r || {})) for (const x of L2) seen.add(iuf + '|' + x.c + '|' + x.lab + '|' + x.t);
-const notes = [];
 for (const id of ids) {
   const wc = (WK.comps || []).find(c => c.id === id) || { id, t: 'Compétition ' + id, b: 25 };
   const root = await get(`${L}resultats.php?competition=${id}&langue=fra&go=detail&action=structure`, { gap: 1000 }); if (!root) continue;
@@ -40,20 +38,12 @@ for (const id of ids) {
       const pts = parseInt(txt(tr.querySelector('.points'))) || 0;
       const rec = { c: ci, lab, relay, place, t: t > 0 ? t : null, raw: tStr, pts, sp: sp.length > 1 ? sp.slice(0, -1) : [] };
       (out.r[sw.iuf] = out.r[sw.iuf] || []).push(rec);
-      const k = sw.iuf + '|' + ci + '|' + lab + '|' + rec.t;
-      if (!seen.has(k) && rec.t && !relay) {
-        const ev = LAB2EV(lab), pb = ev ? best(sw, ev, wc.b || 25) : null;
-        const tag = pb == null ? 'première course' : rec.t < pb ? `RECORD PERSO (−${(pb - rec.t).toFixed(2)} s)` : `record perso ${fmt(pb)}`;
-        notes.push([topicOf(sw.iuf), `${lab.replace(/ Séries$/, '')} : ${fmt(rec.t)}`, `${sw.prenom} ${sw.nom} · ${place} · ${tag}${pts ? ' · ' + pts + ' pts' : ''}\n${wc.t}`, rec.t < (pb || 0) ? 'trophy' : 'stopwatch']);
-        notes.push([TOPIC_CLUB, `${sw.prenom} ${sw.nom} : ${lab.replace(/ Séries$/, '')} ${fmt(rec.t)}`, `${place} · ${tag} · ${wc.t}`, rec.t < (pb || 0) ? 'trophy' : 'stopwatch']);
-      }
     }
   }
 }
 const n = Object.values(out.r).reduce((a, L2) => a + L2.length, 0);
-console.log('résultats :', n, '· nouveaux :', notes.length / 2);
-if (process.env.TEST_COMPS) { console.log(JSON.stringify(out).slice(0, 3000)); notes.slice(0, 6).forEach(x => console.log('[notif]', x.join(' | '))); process.exit(0); }
+console.log('résultats :', n);
+if (process.env.TEST_COMPS) { console.log(JSON.stringify(out).slice(0, 3000)); process.exit(0); }
 if (JSON.stringify({ ...out, maj: '' }) !== JSON.stringify({ ...keep, maj: '' })) {
   html = setConst(html, 'LIVE', out); saveApp(html);
-  for (const x of notes) await notify(...x);
 }

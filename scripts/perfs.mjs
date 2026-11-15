@@ -1,5 +1,5 @@
 // Mise à jour quotidienne des performances extraNat, records du club et notifications
-import { get, dom, txt, sec, fmt, today, readApp, getConst, setConst, saveApp, catOf, qualLevels, EVL, notify, TOPIC_CLUB, topicOf } from './lib.mjs';
+import { get, dom, txt, sec, fmt, today, readApp, getConst, setConst, saveApp, catOf, qualLevels, EVL } from './lib.mjs';
 const X = 'https://ffn.extranat.fr/webffn/';
 const EXTRA = { '2087923': ['180485'] };          // comptes extraNat en double
 const code = s => { s = s.toLowerCase().replace(/[.\s]/g, ''); return s.startsWith('nl') || s.startsWith('nagelibre') ? 'NL' : s.startsWith('dos') ? 'D' : s.startsWith('bra') ? 'B' : s.startsWith('pap') ? 'P' : '4N'; };
@@ -61,7 +61,6 @@ for (const sw of DATA.sw.slice(0, +process.env.LIMIT || undefined)) {
     const isPb = prev.length && p[2] < Math.min(...prev);
     sw.p.unshift(p); added++;
     const recent = (Date.now() - new Date(p[3]).getTime()) < 21 * 864e5;
-    if (isPb && recent) msgs.push([topicOf(sw.iuf), `Record perso ! ${EVL[p[1]]} ${p[0]} m`, `${name} : ${fmt(p[2])} (ancien ${fmt(Math.min(...prev))}, −${(Math.min(...prev) - p[2]).toFixed(2)} s) · ${p[6]}`, 'trophy']);
     // record du club Maîtres
     if (REC && /VIRY/i.test(r.club)) {
       const c = catOf(sw.annee, +p[3].slice(0, 4));
@@ -73,32 +72,20 @@ for (const sw of DATA.sw.slice(0, +process.env.LIMIT || undefined)) {
           const row = [sw.sexe, +p[0], p[1], c.label, p[2], sw.iuf, p[3], city];
           if (inCat) REC.r[REC.r.indexOf(inCat)] = row; else REC.r.push(row);
           REC.sw[sw.iuf] = [`${sw.nom} ${sw.prenom}`, sw.annee];
-          if (recent) { const abs = p[2] < all; const t = `${abs ? 'Record du club' : 'Record du club ' + c.label} : ${EVL[p[1]]} ${p[0]} m`;
-            const m = `${name} : ${fmt(p[2])}${inCat ? ` (ancien ${fmt(inCat[4])})` : ''}`;
-            msgs.push([TOPIC_CLUB, t, m, 'trophy,tada']); msgs.push([topicOf(sw.iuf), t, m, 'trophy,tada']); }
         }
       }
     }
   }
   sw.p.sort((a, b) => a[3] < b[3] ? 1 : -1);
   const after = qualLevels(sw, G, Y);
-  for (const [ev, lv] of Object.entries(after)) if (before[ev] !== lv && !(before[ev] === 'N1')) {
-    const t = `Qualifié${sw.sexe === 'F' ? 'e' : ''} ${lv} ${Y} : ${EVL[ev]}`;
-    msgs.push([topicOf(sw.iuf), t, `${name} décroche une qualification ${lv} aux France ${Y} sur le ${EVL[ev]}.`, 'medal']);
-    msgs.push([TOPIC_CLUB, t, `${name} décroche une qualification ${lv} sur le ${EVL[ev]}.`, 'medal']);
-  }
   console.log(name, '+', fresh.length);
 }
 
 console.log('nouvelles performances :', added, '· échecs :', failed);
 if (failed > (+process.env.LIMIT || DATA.sw.length) / 2) { console.log('extraNat inaccessible : rien n’est publié'); process.exit(1); }
-if (process.env.DRY) { msgs.forEach(m => console.log('[notif]', m.join(' | '))); process.exit(0); }
+if (process.env.DRY) process.exit(0);
 if (added) {
   DATA.maj = today(); html = setConst(html, 'DATA', DATA);
   if (REC) { REC.maj = today(); html = setConst(html, 'CLUB_REC', REC); }
   saveApp(html);
-  // résumé club si plusieurs records perso
-  const pbs = msgs.filter(m => m[1].startsWith('Record perso'));
-  if (pbs.length) msgs.push([TOPIC_CLUB, `${pbs.length} record${pbs.length > 1 ? 's' : ''} perso dans le club`, pbs.slice(0, 8).map(m => m[2].split(' · ')[0].replace(':', ' –') + ' ' + m[1].replace('Record perso ! ', '(') + ')').join('\n'), 'swimmer']);
-  for (const m of msgs) await notify(...m);
 }
