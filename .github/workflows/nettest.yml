@@ -1,0 +1,24 @@
+name: Test réseau
+on:
+  push:
+    paths: ['.github/workflows/nettest.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test
+        run: |
+          mkdir -p ci
+          {
+          date -u
+          for u in "https://ffn.extranat.fr/webffn/nat_recherche.php?idact=nat&idrch_id=3747067&idopt=prf&idbas=25" "https://www.liveffn.com/cgi-bin/liste_live.php" "https://ffn.extranat.fr/webffn/competitions.php?idact=mtr" "https://res.cloudinary.com/egov2fvj/image/list/carnetcnv.json" "https://ntfy.sh/"; do
+            code=$(curl -s -o /tmp/o -w "%{http_code}" -A "Mozilla/5.0 CarnetCNV" "$u"); echo "$code $(wc -c </tmp/o) $u"; grep -o 'IBRAHIM[^<]\{0,40\}' /tmp/o | head -1
+          done
+          } > ci/nettest.txt 2>&1
+          cat ci/nettest.txt
+          git config user.name "carnet-bot"; git config user.email "carnet-bot@users.noreply.github.com"
+          git add ci/nettest.txt; git commit -m "Test réseau GitHub Actions"; git push
