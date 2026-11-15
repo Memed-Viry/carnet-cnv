@@ -3,7 +3,7 @@ import { get, dom, txt, today, readApp, getConst, setConst, saveApp } from './li
 const X = 'https://ffn.extranat.fr/webffn/';
 const MOIS = { janvier: 1, février: 2, fevrier: 2, mars: 3, avril: 4, mai: 5, juin: 6, juillet: 7, août: 8, aout: 8, septembre: 9, octobre: 10, novembre: 11, décembre: 12, decembre: 12 };
 const N = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
-const cityKey = s => N(String(s || '').split(/[,(]/)[0]).replace(/^(saint|st) /, 'saint ').split(' ').slice(0, 2).join(' ');
+const cityKey = s => { const w = N(String(s || '').split(/[,(]/)[0]).replace(/^st /, 'saint ').split(' '); return (/^(saint|sainte|le|la|les|l)$/.test(w[0]) ? w.slice(0, 2) : w.slice(0, 1)).join(' '); };
 const tc = s => String(s || '').toLowerCase().replace(/(^|[\s\-'])\S/g, c => c.toUpperCase());
 const lines = h => { const d = dom(h.replace(/<br\s*\/?>/gi, '\n').replace(/<\/(tr|p|div|td|th|h\d|li|span|a)>/gi, '$&\n')); return (d.body ? d.body.textContent : '').split('\n').map(s => s.replace(/\s+/g, ' ').trim()).filter(Boolean); };
 const iso = (y, m, d) => `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
