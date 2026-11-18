@@ -803,11 +803,11 @@ function wireObjectifs(s){
   document.querySelectorAll('[data-objdel]').forEach(x=>x.onclick=()=>{const o=get(); delete o[x.dataset.objdel]; ls.set(key,JSON.stringify(o)); const y=window.scrollY; viewFiche(s.id); window.scrollTo(0,y)});
 }
 function ficheExtrasHTML(s){
-  return `<div class="grid2"><div class="panel"><h3>Profil du nageur</h3>${profileHTML(s)}</div>${objectifsHTML(s)}</div>
+  return `<div class="panel"><h3>Profil du nageur</h3>${profileHTML(s)}</div>
   ${formeHTML(s)}${estimHTML(s)}
   <div class="panel"><div class="row"><button class="btn ghost" data-go="cmp-${s.id}">Comparer avec un autre nageur</button><button class="btn ghost" id="shareFiche">Copier le lien de cette fiche</button><span id="shareFicheMsg" class="small muted"></span></div></div>`;
 }
-function wireFicheExtras(s){ wireObjectifs(s); const sb=$('#shareFiche'); if(sb) sb.onclick=()=>copyText(ART_URL+'#s'+s.id,$('#shareFicheMsg')); }
+function wireFicheExtras(s){ const sb=$('#shareFiche'); if(sb) sb.onclick=()=>copyText(ART_URL+'#s'+s.id,$('#shareFicheMsg')); }
 
 /* ---------- Plan de course (dans l'analyse) ---------- */
 function planHTML(p){
@@ -919,6 +919,10 @@ function autoSpec(s){
 }
 function getProf(s){
   let o={}; try{o=JSON.parse(ls.get('prof-'+s.id)||'{}')}catch(e){}
+  // reprise des anciens « Mes objectifs » (épreuve + temps) dans les objectifs du profil
+  try{const old=JSON.parse(ls.get('obj-'+s.id)||'null'); if(old&&Object.keys(old).length){
+    const G=Array.isArray(o.goals)?o.goals:[]; for(const [ev,x] of Object.entries(old)) if(EVL[ev]&&G.length<4&&!G.some(g=>g.ev===ev)) G.push({ev,compT:null,t:x.t||null});
+    if(G.length){o.goals=G; if(!o.ev) o.ev=G[0].ev; ls.set('prof-'+s.id,JSON.stringify(o))} ls.del('obj-'+s.id);}}catch(e){}
   const a=autoSpec(s);
   const hasN1=summary(s).n1>0; const nextNat=CAL.find(e=>e.k==='nat'&&/hiver|été/.test(e.t)&&!(hasN1&&/N2/.test(e.t))&&e.d&&e.d>=today())||CAL.find(e=>e.k==='nat'&&e.d&&e.d>=today())||CAL.find(e=>e.d&&e.d>=today());
   const comp=(o.compT!=null?CAL.findIndex(e=>e.t===o.compT):o.comp)??(nextNat?CAL.indexOf(nextNat):-1), ev=o.ev||a.ev;
