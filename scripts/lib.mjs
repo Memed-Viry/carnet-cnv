@@ -38,9 +38,10 @@ export function setConst(html, name, val) {
   return html.replace(re, () => `const ${name} = ${JSON.stringify(val)};`);
 }
 export function saveApp(html) {
+  const v = new Date().toISOString().replace(/\D/g, '').slice(0, 12);
+  html = html.replace(/const BUILD = '[^']*';/, `const BUILD = '${v}';`);
   fs.writeFileSync(ROOT + 'index.html', html);
   const swp = ROOT + 'sw.js'; let sw = fs.readFileSync(swp, 'utf8');
-  const v = new Date().toISOString().replace(/\D/g, '').slice(0, 12);
   sw = sw.replace(/carnet-[0-9a-z-]+/g, 'carnet-' + v).replace(/Version [0-9a-z-]+/g, 'Version ' + v);
   fs.writeFileSync(swp, sw);
 }
