@@ -68,6 +68,6 @@ for (const [iuf, L2] of Object.entries(out.e)) for (const r of L2) { const c = o
 const same = JSON.stringify({ ...out, maj: '' }) === JSON.stringify({ ...OLD, maj: '' });
 console.log('compétitions :', out.comps.map(c => c.t).join(' | ') || 'aucune', '· nageurs :', Object.keys(out.e).length, same ? '(inchangé)' : '');
 if (process.env.TEST_COMPS) { console.log(JSON.stringify(out).slice(0, 3000)); process.exit(0); }
-if (!same) {
+if (!same || OLD.maj !== out.maj) {
   html = setConst(html, 'WEEKEND', out); saveApp(html);
 }
