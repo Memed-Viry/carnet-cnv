@@ -927,7 +927,7 @@ function getProf(s){
   const hasN1=summary(s).n1>0; const nextNat=CAL.find(e=>e.k==='nat'&&/hiver|été/.test(e.t)&&!(hasN1&&/N2/.test(e.t))&&e.d&&e.d>=today())||CAL.find(e=>e.k==='nat'&&e.d&&e.d>=today())||CAL.find(e=>e.d&&e.d>=today());
   const comp=(o.compT!=null?CAL.findIndex(e=>e.t===o.compT):o.comp)??(nextNat?CAL.indexOf(nextNat):-1), ev=o.ev||a.ev;
   const goals=(Array.isArray(o.goals)&&o.goals.length?o.goals:[{ev,compT:comp>=0&&CAL[comp]?CAL[comp].t:null,t:null}]).slice(0,4).map(g=>({ev:g.ev,compT:g.compT||null,comp:g.compT?CAL.findIndex(e=>e.t===g.compT):-1,t:g.t||null}));
-  return {stroke:o.stroke||a.stroke, dist:o.dist||a.dist, ev, comp, goals, sess:+(o.sess||3), dur:+(o.dur||60), auto:a, custom:!!o.stroke, saved:!!o.goals};
+  return {stroke:o.stroke||a.stroke, dist:o.dist||a.dist, ev, comp, goals, sess:+(o.sess||3), dur:+(o.dur||60), vol:o.vol||'normal', auto:a, custom:!!o.stroke, saved:!!o.goals};
 }
 function saveProf(s,o){if(o.comp!=null) o.compT=o.comp>=0&&CAL[o.comp]?CAL[o.comp].t:null; ls.set('prof-'+s.id,JSON.stringify(o))}
 
@@ -1025,12 +1025,13 @@ function viewProf(id){
       <label for="pf_c${i}" style="min-width:0">Compétition visée${selHTML('pf_c'+i,[[-1,'Aucune en particulier'],...comps],g.comp??-1,'Compétition objectif '+(i+1))}</label>
       <label>Temps visé <span class="muted" style="font-weight:400">(facultatif)</span>${TIN('pf_t'+i,g.t,true)}</label></div>`}).join('')}
     <label for="pf_s">Séances par semaine${selHTML('pf_s',[[2,'2'],[3,'3'],[4,'4'],[5,'5']],pr.sess,'Séances')}</label>
+    <label for="pf_vo">Volume${selHTML('pf_vo',[['leger','Léger (−20 %)'],['normal','Normal'],['soutenu','Soutenu (+15 %)']],pr.vol,'Volume')}</label>
     <label for="pf_du">Durée d’une séance${selHTML('pf_du',[[45,'45 min'],[60,'1 h'],[75,'1 h 15'],[90,'1 h 30'],[105,'1 h 45'],[120,'2 h']],pr.dur,'Durée')}</label>
     <div class="wide row"><button class="btn" id="pf_ok">Enregistrer</button><button class="btn ghost" id="pf_auto">Revenir à la détection auto</button></div></div></div></div>`;
   $('#pf_ok').onclick=()=>{
     const goals=[0,1,2,3].map(i=>{const ev=$('#pf_ev'+i).value, c=+$('#pf_c'+i).value, t=parseT($('#pf_t'+i).value);return ev?{ev,compT:c>=0&&CAL[c]?CAL[c].t:null,t:t>0?t:null}:null}).filter(Boolean);
     if(!goals.length){alert('Indiquez au moins l’objectif 1.');return}
-    saveProf(s,{stroke:$('#pf_st').value,dist:$('#pf_d').value,ev:goals[0].ev,comp:goals[0].compT?CAL.findIndex(e=>e.t===goals[0].compT):-1,goals,sess:+$('#pf_s').value,dur:+$('#pf_du').value});go('prog-'+id)};
+    saveProf(s,{stroke:$('#pf_st').value,dist:$('#pf_d').value,ev:goals[0].ev,comp:goals[0].compT?CAL.findIndex(e=>e.t===goals[0].compT):-1,goals,sess:+$('#pf_s').value,dur:+$('#pf_du').value,vol:$('#pf_vo').value});go('prog-'+id)};
   $('#pf_auto').onclick=()=>{ls.del('prof-'+id);go('prof-'+id)};
   wire();
 }
@@ -1052,7 +1053,9 @@ const SESS_PLAN={
 const SESS_LAB={endu:'Endurance et technique',endu2:'Endurance longue',seuil:'Seuil (CSS)',vitesse:'Vitesse',technique:'Technique et virages',allure:'Allure de course',lactique:'Tolérance lactique',allure_c:'Allure de course (court)',activation:'Activation pré-compétition'};
 const restK=age=>age>=75?1.4:age>=65?1.3:age>=55?1.2:age>=40?1.1:1;   // récupérations allongées avec l'âge
 const isoWeek=(d=new Date())=>{const t=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));const day=t.getUTCDay()||7;t.setUTCDate(t.getUTCDate()+4-day);const y0=new Date(Date.UTC(t.getUTCFullYear(),0,1));return Math.ceil(((t-y0)/864e5+1)/7)};
-const taperK=ph=>ph.key!=='affut'?1:ph.weeks!=null&&ph.weeks<=1?0.5:0.6;  // affûtage : −40 à −50 % de volume, intensité gardée
+const deload=ph=>ph.key==='foncier'&&isoWeek()%4===0;                       // 1 semaine allégée sur 4 en développement général
+const taperK=ph=>ph.key==='affut'?(ph.weeks!=null&&ph.weeks<=1?0.5:0.6):deload(ph)?0.7:1;  // affûtage : −40 à −50 % de volume, intensité gardée
+const VOLK={leger:0.8,normal:1,soutenu:1.15};
 function buildSession(type,pr,pa,dur){
   const RK=restK(pr.age||40), V=(pr.week??isoWeek())+(pr.vshift||0), pick=a=>a[((V%a.length)+a.length)%a.length];
   const st=pr.stroke, sn=st==='4N'?'4 nages':STROKE_NAME[st], css=pa.css, spDist=pr.dist==='sprint'?100:pr.dist==='demi'?200:400;
@@ -1093,12 +1096,12 @@ function buildSession(type,pr,pa,dur){
   // ajuster le volume à la durée : coefficient appliqué au nombre de répétitions du 1er bloc
   const timeOf=b=>b.n*((b.pace?b.pace/100*b.d:css*1.15/100*b.d)+b.rest);
   const cd=200*css*1.2/100, wu=B.reduce((t,b)=>t+b.n*((b.t||css*1.2/100*b.d)+b.rest),0);
-  const avail=dur*60-wu-cd-120; let tot=main.reduce((t,b)=>t+timeOf(b),0);
+  const avail=(dur*60-wu-cd-300)*(VOLK[pr.vol]||1); let tot=main.reduce((t,b)=>t+timeOf(b),0);
   if(main.length&&tot>0){const f=avail/tot; if(type!=='activation'&&type!=='allure_c') main.forEach(b=>{if(b.n>1) b.n=Math.max(2,Math.round(b.n*Math.min(1.6,Math.max(0.5,f))))})}
   for(const b of main) add(b.n,b.d,b.txt,b.pace,b.rest,b.z);
   // séances longues : compléter par un bloc aérobie (pull-buoy / nage continue)
   const left=avail-main.reduce((t,b)=>t+timeOf(b),0);
-  if(left>360&&type!=='activation'&&type!=='allure_c'){const d=Math.min(3200,Math.floor(left/(css*1.15/100)/100)*100); if(d>=300){const n=d>=800?Math.round(d/400):Math.round(d/200), dd=d>=800?400:200; add(n,dd,'crawl continu, pull-buoy possible, respiration 3-5 temps',css/0.87,20,2)}}
+  if(left>360&&type!=='activation'&&type!=='allure_c'){const d=Math.min(4000,Math.floor(left/(css*1.15/100)/100)*100); if(d>=300){const n=d>=800?Math.round(d/400):Math.round(d/200), dd=d>=800?400:200; add(n,dd,'crawl continu, pull-buoy possible, respiration 3-5 temps',css/0.87,20,2)}}
   add(1,200,'retour au calme souple',null,0,1);
   const vol=B.reduce((t,b)=>t+b.n*b.d,0);
   return {blocks:B,vol,warm:3};
@@ -1128,11 +1131,11 @@ function viewProg(id,gi=0){
   <div class="panel"><div class="muted small" style="text-transform:uppercase;letter-spacing:.07em;font-weight:600">Programme personnalisé${all?' · tous mes objectifs (séances réparties)':g&&pr0.saved?` · objectif ${gi+1} : ${EVL[g.ev]}${g.t?' en '+fmt(g.t):''}`:''}</div>
     <h2 style="margin:2px 0 6px">${esc(s.prenom)} · ${all?G.map(x=>EVL[x.ev]).join(' · '):STROKE_NAME[pr.stroke]+' '+DIST_GROUPS.find(d=>d[0]===pr.dist)[1].split(' (')[0].toLowerCase()}</h2>
     <div class="kpis"><div class="kpi"><div class="v">${pr.sess}</div><div class="l">Séances / sem.</div></div><div class="kpi"><div class="v">${(tot/1000).toFixed(1)} km</div><div class="l">Volume semaine</div></div><div class="kpi"><div class="v">${fmt(pa.css)}</div><div class="l">CSS /100</div></div>${ph.weeks!=null?`<div class="kpi"><div class="v">${ph.weeks}</div><div class="l">Semaines avant compét.</div></div>`:''}</div>
-    <div class="hint" style="margin-top:12px"><span><b>${ph.lab}</b>${ph.comp?` vers « ${esc(ph.comp.t)} » (${fdate(ph.comp.d)})`:''}. ${ph.key==='foncier'?'Priorité au volume aérobie, au seuil et à la technique.':ph.key==='spec'?'Priorité aux allures de course de votre épreuve et à la tolérance lactique.':`Volume réduit de ${ph.weeks!=null&&ph.weeks<=1?50:40} %, intensité maintenue : arriver frais.`} Objectif : ${EVL[pr.ev]}.</span></div>
+    <div class="hint" style="margin-top:12px"><span><b>${ph.lab}</b>${ph.comp?` vers « ${esc(ph.comp.t)} » (${fdate(ph.comp.d)})`:''}. ${deload(ph)?'<b>Semaine allégée</b> (1 sur 4) : volume réduit de 30 % pour assimiler le travail. ':''}${ph.key==='foncier'?'Priorité au volume aérobie, au seuil et à la technique.':ph.key==='spec'?'Priorité aux allures de course de votre épreuve et à la tolérance lactique.':`Volume réduit de ${ph.weeks!=null&&ph.weeks<=1?50:40} %, intensité maintenue : arriver frais.`} Objectif : ${EVL[pr.ev]}.</span></div>
     <div class="row" style="margin-top:10px"><button class="btn ghost" data-go="prof-${id}">Modifier spécialité, objectif, séances</button></div></div>
   <div class="row noprint" style="justify-content:flex-end">${PBTN('Programme natation de la semaine','data-printall=".psess"')}<span class="small muted">toutes les séances</span></div>
   ${sess.map(([t,x,tag],i)=>sessionHTML(t,x,i,tag||(g&&pr0.saved&&!all?`${EVL[g.ev]}${g.t?' · visé '+fmt(g.t):''}`:''))).join('')}
-  <p class="note">Temps cibles calculés à partir des meilleurs temps de ${esc(s.prenom)} (CSS ${pa.cssSrc})${g&&g.t?`, allures de course calées sur le temps visé de ${fmt(g.t)} au ${EVL[g.ev]}`:''}. Récupérations ${restK(ageOf(s))>1?`allongées de ${Math.round((restK(ageOf(s))-1)*100)} % (${ageOf(s)} ans)`:'standard'}, départs arrondis aux 5 s, bassin de 25 m. Les séances changent chaque semaine et le programme suit la date de la compétition. À adapter avec l’entraîneur et selon la forme du jour.</p></div>`;
+  <p class="note">Temps cibles calculés à partir des meilleurs temps de ${esc(s.prenom)} (CSS ${pa.cssSrc})${g&&g.t?`, allures de course calées sur le temps visé de ${fmt(g.t)} au ${EVL[g.ev]}`:''}. Volume ${{leger:'léger (−20 %)',normal:'normal',soutenu:'soutenu (+15 %)'}[pr.vol]||'normal'}. Récupérations ${restK(ageOf(s))>1?`allongées de ${Math.round((restK(ageOf(s))-1)*100)} % (${ageOf(s)} ans)`:'standard'}, départs arrondis aux 5 s, bassin de 25 m. Les séances changent chaque semaine et le programme suit la date de la compétition. À adapter avec l’entraîneur et selon la forme du jour.</p></div>`;
   wire();
 }
 
