@@ -1002,7 +1002,7 @@ function goalsHTML(s,compact){
     const b=bestOf(s.id,g.ev,pool,`${REF_YEAR-3}-01-01`)||bestOf(s.id,g.ev,pool===25?50:25,`${REF_YEAR-3}-01-01`);
     const gap=g.t&&b?b.t-g.t:null;
     return `<div style="display:flex;justify-content:space-between;gap:8px;padding:6px 0;${i?'border-top:1px solid var(--line)':''}"><div style="min-width:0"><b>${i+1}. ${EVL[g.ev]||g.ev}</b>${c?`<div class="small muted">${esc(c.t)}${c.d?' · '+fdate(c.d):''}</div>`:''}</div>
-      <div style="text-align:right;white-space:nowrap">${g.t?`<div class="small">visé <b class="t">${fmt(g.t)}</b></div>`:''}${b?`<div class="small muted">actuel <span class="t">${fmt(b.t)}</span> (${b.pool} m)${gap!=null?` · <b style="color:${gap<=0?'#1d9e5a':'var(--rope)'}">${gap<=0?'atteint ✓':'−'+gap.toFixed(2)+' s'}</b>`:''}</div>`:''}</div></div>`}).join('');
+      <div style="text-align:right;white-space:nowrap">${compact?'':`<button class="tlink small" data-go="prog-${s.id}~${i}">Séances ›</button>`}${g.t?`<div class="small">visé <b class="t">${fmt(g.t)}</b></div>`:''}${b?`<div class="small muted">actuel <span class="t">${fmt(b.t)}</span> (${b.pool} m)${gap!=null?` · <b style="color:${gap<=0?'#1d9e5a':'var(--rope)'}">${gap<=0?'atteint ✓':'−'+gap.toFixed(2)+' s'}</b>`:''}</div>`:''}</div></div>`}).join('');
   return compact?rows:`<div class="panel"><div class="row" style="justify-content:space-between;align-items:center"><h3 style="margin:0">🎯 Objectifs</h3><button class="tlink" data-go="prof-${s.id}">Modifier</button></div>${rows}</div>`;
 }
 function viewProf(id){
@@ -1082,21 +1082,26 @@ function sessionHTML(t,ses,idx){
   <div class="stack" style="gap:6px;margin-top:8px">${ses.blocks.map((b,i)=>{const z=b.z===6?5:b.z;const head=i<ses.warm?'Éch.':i===ses.blocks.length-1?'Fin':'';
     return `<div class="zone" style="--zc:var(--z${z});grid-template-columns:minmax(0,1fr) auto;background:var(--surface)"><div class="zt"><b>${head?`<span class="muted" style="font-weight:400">${head} · </span>`:''}${b.n>1?b.n+' × ':''}${b.d} m</b><span>${esc(b.txt)}${b.z===6?' · sprint':b.z>1?' · Z'+b.z:''}</span></div><div class="zp">${b.t?`${fmt(b.t,1)}${b.n>1?`<i>départ ${fmtS(b.dep)}</i>`:''}`:(b.n>1&&b.rest?`<i>récup ${b.rest} s</i>`:'<i>souple</i>')}</div></div>`}).join('')}</div></div>`;
 }
-function viewProg(id){
+function viewProg(id,gi=0){
   const s=S.sw[id]; if(!s){go('nageurs');return}
-  const pr=getProf(s), pa=persoPaces(s,pr), ph=phaseOf(pr), plan=SESS_PLAN[ph.key].slice(0,pr.sess);
+  const pr0=getProf(s), G=pr0.goals||[]; if(!G[gi]) gi=0; const g=G[gi]||null;
+  const pr=gi>0&&g?{...pr0,ev:g.ev,stroke:strokeOf(g.ev),dist:distGroup(dist(g.ev)),comp:g.comp}:{...pr0,comp:g&&pr0.saved?g.comp:pr0.comp};
+  const pa0=persoPaces(s,pr), D=dist(pr.ev);
+  const pa=g&&g.t&&strokeOf(g.ev)===pr.stroke?{...pa0,pace:d=>d===D?g.t/D*100:pa0.pace(d)*(g.t/D*100)/pa0.pace(D)}:pa0;
+  const ph=phaseOf(pr), plan=SESS_PLAN[ph.key].slice(0,pr.sess);
   const dur=ph.key==='affut'?Math.round(pr.dur*0.75/15)*15:pr.dur;
   const sess=plan.map(t=>[t,buildSession(t,pr,pa,dur)]);
   const tot=sess.reduce((t,[,x])=>t+x.vol,0);
   $('#view').innerHTML=`<button class="back" data-go="s${id}">‹ ${esc(swName(s))}</button><div class="stack">
-  <div class="panel"><div class="muted small" style="text-transform:uppercase;letter-spacing:.07em;font-weight:600">Programme personnalisé</div>
+  ${G.length>1&&pr0.saved?`<div class="chips" style="margin:0">${G.map((x,i)=>`<button class="chip-f" data-go="prog-${id}~${i}" aria-pressed="${i===gi}">🎯 ${i+1}. ${EVL[x.ev]||x.ev}</button>`).join('')}</div>`:''}
+  <div class="panel"><div class="muted small" style="text-transform:uppercase;letter-spacing:.07em;font-weight:600">Programme personnalisé${g&&pr0.saved?` · objectif ${gi+1} : ${EVL[g.ev]}${g.t?' en '+fmt(g.t):''}`:''}</div>
     <h2 style="margin:2px 0 6px">${esc(s.prenom)} · ${STROKE_NAME[pr.stroke]} ${DIST_GROUPS.find(d=>d[0]===pr.dist)[1].split(' (')[0].toLowerCase()}</h2>
     <div class="kpis"><div class="kpi"><div class="v">${pr.sess}</div><div class="l">Séances / sem.</div></div><div class="kpi"><div class="v">${(tot/1000).toFixed(1)} km</div><div class="l">Volume semaine</div></div><div class="kpi"><div class="v">${fmt(pa.css)}</div><div class="l">CSS /100</div></div>${ph.weeks!=null?`<div class="kpi"><div class="v">${ph.weeks}</div><div class="l">Semaines avant compét.</div></div>`:''}</div>
     <div class="hint" style="margin-top:12px"><span><b>${ph.lab}</b>${ph.comp?` vers « ${esc(ph.comp.t)} » (${fdate(ph.comp.d)})`:''}. ${ph.key==='foncier'?'Priorité au volume aérobie, au seuil et à la technique.':ph.key==='spec'?'Priorité aux allures de course de votre épreuve et à la tolérance lactique.':'Volume réduit d’environ 25 %, intensité maintenue : arriver frais.'} Objectif : ${EVL[pr.ev]}.</span></div>
     <div class="row" style="margin-top:10px"><button class="btn ghost" data-go="prof-${id}">Modifier spécialité, objectif, séances</button></div></div>
   <div class="row noprint" style="justify-content:flex-end">${PBTN('Programme natation de la semaine','data-printall=".psess"')}<span class="small muted">toutes les séances</span></div>
   ${sess.map(([t,x],i)=>sessionHTML(t,x,i)).join('')}
-  <p class="note">Temps cibles calculés à partir des meilleurs temps de ${esc(s.prenom)} (CSS ${pa.cssSrc}). Départs arrondis aux 5 s, bassin de 25 m. Le programme se recalcule chaque semaine en fonction de la date de la compétition. À adapter avec l’entraîneur et selon la forme du jour.</p></div>`;
+  <p class="note">Temps cibles calculés à partir des meilleurs temps de ${esc(s.prenom)} (CSS ${pa.cssSrc})${g&&g.t?`, allures de course calées sur le temps visé de ${fmt(g.t)} au ${EVL[g.ev]}`:''}. Départs arrondis aux 5 s, bassin de 25 m. Le programme se recalcule chaque semaine en fonction de la date de la compétition. À adapter avec l’entraîneur et selon la forme du jour.</p></div>`;
   wire();
 }
 
@@ -2345,7 +2350,7 @@ function route(tok){
   else if(tok==='moi') viewMoi(); else if(tok==='zones'){viewZones(); tab='entr'} else if(tok==='entr') viewEntr(); else if(tok==='chrono'){viewChronoCourse(); tab='chrono'} else if(tok==='series'){viewChrono(); tab='chrono'} else if(tok==='grilles'){viewClub('grilles'); tab='club'}
   else if(tok==='club'||tok.startsWith('club-')){viewClub(tok.slice(5)); tab='club'}
   else if(tok.startsWith('cmp-')){viewCmp(tok.slice(4)); tab='nageurs'}
-  else if(tok.startsWith('prog-')){viewProg(tok.slice(5)); tab=tok.slice(5)===me()?'entr':'nageurs'}
+  else if(tok.startsWith('prog-')){const [pid,pg]=tok.slice(5).split('~'); viewProg(pid,+pg||0); tab=pid===me()?'entr':'nageurs'}
   else if(tok.startsWith('prof-')){viewProf(tok.slice(5)); tab=tok.slice(5)===me()?'entr':'nageurs'}
   else if(tok==='forme'){viewForme(); tab='forme'}
   else if(tok.startsWith('forme-')){viewForme(tok.slice(6)); tab=tok.slice(6)===me()?'forme':'nageurs'}
