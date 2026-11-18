@@ -1050,26 +1050,46 @@ const SESS_PLAN={
   spec:['allure','seuil','lactique','endu','technique'],
   affut:['allure_c','vitesse','activation','technique','activation']};
 const SESS_LAB={endu:'Endurance et technique',endu2:'Endurance longue',seuil:'Seuil (CSS)',vitesse:'Vitesse',technique:'Technique et virages',allure:'Allure de course',lactique:'Tolérance lactique',allure_c:'Allure de course (court)',activation:'Activation pré-compétition'};
+const restK=age=>age>=75?1.4:age>=65?1.3:age>=55?1.2:age>=40?1.1:1;   // récupérations allongées avec l'âge
+const isoWeek=(d=new Date())=>{const t=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));const day=t.getUTCDay()||7;t.setUTCDate(t.getUTCDate()+4-day);const y0=new Date(Date.UTC(t.getUTCFullYear(),0,1));return Math.ceil(((t-y0)/864e5+1)/7)};
+const taperK=ph=>ph.key!=='affut'?1:ph.weeks!=null&&ph.weeks<=1?0.5:0.6;  // affûtage : −40 à −50 % de volume, intensité gardée
 function buildSession(type,pr,pa,dur){
+  const RK=restK(pr.age||40), V=(pr.week??isoWeek())+(pr.vshift||0), pick=a=>a[((V%a.length)+a.length)%a.length];
   const st=pr.stroke, sn=st==='4N'?'4 nages':STROKE_NAME[st], css=pa.css, spDist=pr.dist==='sprint'?100:pr.dist==='demi'?200:400;
   const rp=d=>pa.pace(d); // allure /100 de course dans la nage de spécialité
-  const B=[]; const add=(n,d,txt,pace,rest,z)=>{const t=pace?pace/100*d:null; B.push({n,d,txt,t,dep:t?round5(t+rest):null,rest,z})};
+  const B=[]; const add=(n,d,txt,pace,rest,z)=>{rest=rest?round5(rest*RK):0; const t=pace?pace/100*d:null; B.push({n,d,txt,t,dep:t?round5(t+rest):null,rest,z})};
   // échauffement
   add(1,300,'souple, nages variées',null,0,1); add(4,50,`éducatifs ${sn} : ${TECH[st][0].split(' : ')[0].toLowerCase()}`,null,15,1); add(4,25,'progressif',css*0.95,20,3);
   const vol0=B.reduce((t,b)=>t+b.n*b.d,0);
   const main=[];
   const M=(n,d,txt,pace,rest,z)=>main.push({n,d,txt,pace,rest,z});
-  switch(type){
-    case 'endu': M(4,200,`crawl régulier, respiration 3 temps`,css/0.885,20,2); M(8,50,`${sn} technique : ${TECH[st][1].split(' : ')[0].toLowerCase()}`,null,15,1); M(4,100,`${sn} aisance`,rp(200)*1.08,20,2); break;
-    case 'endu2': M(1,800,'crawl continu, allure régulière',css/0.88,0,2); M(6,100,`${sn} allure 400`,rp(400)*1.03,20,3); break;
-    case 'seuil': M(10,100,'crawl allure CSS',css,15,4); M(4,50,`${sn} allure 200`,rp(200),25,4); break;
-    case 'vitesse': M(4,100,'crawl souple, mise en route',css/0.86,20,2); M(8,25,`${sn} sprint max, départ plongé ou poussée forte`,rp(50)*0.97,40,6); M(4,50,`${sn} 25 vite / 25 souple`,null,30,3); M(4,100,'crawl récupération active',css/0.85,20,1); break;
-    case 'technique': M(8,50,`${sn} éducatifs (voir liste)`,null,20,1); M(6,25,'virages + coulées, sortie de virage rapide',null,30,3); M(4,100,`${sn} nage complète, amplitude`,rp(200)*1.1,20,2); break;
-    case 'allure': M(spDist<=100?6:5,spDist<=100?50:100,`${sn} allure de course ${spDist} m`,rp(spDist),spDist<=100?40:30,5); M(4,100,'crawl allure CSS',css,15,4); break;
-    case 'lactique': M(spDist<=100?6:4,spDist<=100?50:100,`${sn} à fond, récupération longue`,rp(spDist<=100?100:200)*0.99,spDist<=100?75:120,6); M(1,200,'souple entre les séries',null,0,1); M(4,25,`${sn} sprint`,rp(50),35,6); break;
-    case 'allure_c': M(4,spDist<=100?25:50,`${sn} allure de course ${spDist} m`,rp(spDist),45,5); M(2,spDist<=100?50:100,`${sn} allure course, relâché`,rp(spDist)*1.01,60,5); break;
-    case 'activation': M(4,25,`${sn} départs plongés`,rp(50),45,6); M(2,50,`${sn} allure course`,rp(spDist),60,5); break;
-  }
+  const T=k=>TECH[st][k%TECH[st].length].split(' : ')[0].toLowerCase();
+  const V_={
+    endu:[()=>{M(4,200,`crawl régulier, respiration 3 temps`,css/0.885,20,2); M(8,50,`${sn} technique : ${T(1)}`,null,15,1); M(4,100,`${sn} aisance`,rp(200)*1.08,20,2)},
+          ()=>{M(3,300,'crawl régulier, négatif (2e moitié plus vite)',css/0.89,30,2); M(6,50,`${sn} technique : ${T(2)}`,null,15,1); M(6,75,`${sn} aisance, amplitude`,rp(200)*1.08,20,2)},
+          ()=>{M(1,400,'crawl continu',css/0.88,30,2); M(8,100,`alterné 50 ${sn} / 50 crawl`,rp(200)*1.07,20,2); M(4,50,`${sn} technique : ${T(3)}`,null,15,1)}],
+    endu2:[()=>{M(1,800,'crawl continu, allure régulière',css/0.88,0,2); M(6,100,`${sn} allure 400`,rp(400)*1.03,20,3)},
+           ()=>{M(2,500,'crawl continu, pull-buoy le 2e',css/0.88,40,2); M(4,150,`${sn} allure 400`,rp(400)*1.03,20,3)},
+           ()=>{M(1,1000,'crawl continu, 1 virage sur 2 en apnée',css/0.89,0,2); M(8,50,`${sn} tempo`,rp(400)*1.0,20,3)}],
+    seuil:[()=>{M(10,100,'crawl allure CSS',css,15,4); M(4,50,`${sn} allure 200`,rp(200),25,4)},
+           ()=>{M(5,200,'crawl allure CSS',css,20,4); M(6,50,`${sn} allure 200`,rp(200),25,4)},
+           ()=>{M(3,300,'crawl allure CSS +1 s',css*1.01,30,4); M(4,100,`${sn} allure 400`,rp(400),20,4)},
+           ()=>{M(1,400,'crawl allure CSS',css,30,4); M(8,75,'crawl allure CSS −1 s',css*0.99,15,4); M(4,50,`${sn} allure 200`,rp(200),25,4)}],
+    vitesse:[()=>{M(4,100,'crawl souple, mise en route',css/0.86,20,2); M(8,25,`${sn} sprint max, départ plongé ou poussée forte`,rp(50)*0.97,40,6); M(4,50,`${sn} 25 vite / 25 souple`,null,30,3); M(4,100,'crawl récupération active',css/0.85,20,1)},
+             ()=>{M(4,100,'crawl souple, mise en route',css/0.86,20,2); M(6,15,`${sn} départ poussée, 15 m explosifs`,rp(50)*0.95,45,6); M(6,50,`${sn} 15 m sprint + fin souple`,null,30,3); M(4,100,'crawl récupération active',css/0.85,20,1)},
+             ()=>{M(3,100,'crawl souple, mise en route',css/0.86,20,2); M(4,50,`${sn} 50 sprint, récupération complète`,rp(50)*0.99,90,6); M(6,25,`${sn} vitesse de bras maximale`,rp(50),35,6); M(4,100,'crawl récupération active',css/0.85,20,1)}],
+    technique:[()=>{M(8,50,`${sn} éducatifs (voir liste)`,null,20,1); M(6,25,'virages + coulées, sortie de virage rapide',null,30,3); M(4,100,`${sn} nage complète, amplitude`,rp(200)*1.1,20,2)},
+               ()=>{M(6,50,`${sn} : ${T(0)}`,null,20,1); M(6,50,`${sn} : ${T(1)}`,null,20,1); M(8,25,'départs et coulées, 5 coulées minimum',null,30,3); M(3,100,`${sn} compter les mouvements par longueur`,rp(200)*1.1,20,2)},
+               ()=>{M(4,75,`${sn} : ${T(2)} / ${T(3)} / nage complète`,null,20,1); M(8,25,'virages à allure de course',null,30,3); M(4,100,`${sn} nage complète, 1 mouvement de moins par longueur`,rp(200)*1.1,20,2)}],
+    allure:[()=>{M(spDist<=100?6:5,spDist<=100?50:100,`${sn} allure de course ${spDist} m`,rp(spDist),spDist<=100?40:30,5); M(4,100,'crawl allure CSS',css,15,4)},
+            ()=>{M(spDist<=100?8:4,spDist<=100?25:150,`${sn} allure de course ${spDist} m`,rp(spDist),spDist<=100?30:40,5); M(3,200,'crawl allure CSS',css,20,4)},
+            ()=>{M(2,spDist<=100?100:200,`${sn} « broken » : ${spDist<=100?'4 × 25':'4 × 50'} à allure course, 10 s entre`,rp(spDist),90,5); M(4,100,'crawl allure CSS',css,15,4)}],
+    lactique:[()=>{M(spDist<=100?6:4,spDist<=100?50:100,`${sn} à fond, récupération longue`,rp(spDist<=100?100:200)*0.99,spDist<=100?75:120,6); M(1,200,'souple entre les séries',null,0,1); M(4,25,`${sn} sprint`,rp(50),35,6)},
+              ()=>{M(spDist<=100?4:3,spDist<=100?75:150,`${sn} à fond, récupération longue`,rp(spDist<=100?100:200)*0.99,spDist<=100?90:150,6); M(1,200,'souple entre les séries',null,0,1); M(6,25,`${sn} sprint`,rp(50),35,6)},
+              ()=>{M(3,spDist<=100?100:200,`${sn} : 1re moitié allure course, 2e moitié à fond`,rp(spDist<=100?100:200),spDist<=100?150:180,6); M(1,200,'souple entre les séries',null,0,1); M(4,25,`${sn} sprint`,rp(50),35,6)}],
+    allure_c:[()=>{M(4,spDist<=100?25:50,`${sn} allure de course ${spDist} m`,rp(spDist),45,5); M(2,spDist<=100?50:100,`${sn} allure course, relâché`,rp(spDist)*1.01,60,5)}],
+    activation:[()=>{M(4,25,`${sn} départs plongés`,rp(50),45,6); M(2,50,`${sn} allure course`,rp(spDist),60,5)}]};
+  pick(V_[type]||V_.endu)();
   // ajuster le volume à la durée : coefficient appliqué au nombre de répétitions du 1er bloc
   const timeOf=b=>b.n*((b.pace?b.pace/100*b.d:css*1.15/100*b.d)+b.rest);
   const cd=200*css*1.2/100, wu=B.reduce((t,b)=>t+b.n*((b.t||css*1.2/100*b.d)+b.rest),0);
@@ -1092,26 +1112,27 @@ function progCtx(s,pr0,g,gi){
   const pr=gi>0&&g?{...pr0,ev:g.ev,stroke:strokeOf(g.ev),dist:distGroup(dist(g.ev)),comp:g.comp}:{...pr0,comp:g&&pr0.saved?g.comp:pr0.comp};
   const pa0=persoPaces(s,pr), D=dist(pr.ev);
   const pa=g&&g.t&&strokeOf(g.ev)===pr.stroke?{...pa0,pace:d=>d===D?g.t/D*100:pa0.pace(d)*(g.t/D*100)/pa0.pace(D)}:pa0;
+  pr.age=ageOf(s); pr.vshift=gi||0;
   return {pr,pa,ph:phaseOf(pr)};
 }
 function viewProg(id,gi=0){
   const s=S.sw[id]; if(!s){go('nageurs');return}
   const pr0=getProf(s), G=pr0.saved?pr0.goals:[]; const all=gi==='all'&&G.length>1; if(!all&&!G[gi]) gi=0; const g=all?G[0]:(G[gi]||null);
   const C=progCtx(s,pr0,g,all?0:gi), pr=C.pr, pa=C.pa, ph=C.ph, plan=SESS_PLAN[ph.key].slice(0,pr.sess);
-  const dur=ph.key==='affut'?Math.round(pr.dur*0.75/15)*15:pr.dur;
+  const dur=Math.max(30,Math.round(pr.dur*taperK(ph)/15)*15);
   const ctxs=all?G.map((x,k)=>progCtx(s,pr0,x,k)):null;
-  const sess=plan.map((t,k)=>{if(!all) return [t,buildSession(t,pr,pa,dur)]; const gk=k%G.length, c=ctxs[gk], tt=SESS_PLAN[c.ph.key][k]||t, du=c.ph.key==='affut'?Math.round(pr.dur*0.75/15)*15:pr.dur; return [tt,buildSession(tt,c.pr,c.pa,du),`${EVL[G[gk].ev]}${G[gk].t?' · visé '+fmt(G[gk].t):''}`]});
+  const sess=plan.map((t,k)=>{if(!all) return [t,buildSession(t,pr,pa,dur)]; const gk=k%G.length, c=ctxs[gk], tt=SESS_PLAN[c.ph.key][k]||t, du=Math.max(30,Math.round(pr.dur*taperK(c.ph)/15)*15); return [tt,buildSession(tt,c.pr,c.pa,du),`${EVL[G[gk].ev]}${G[gk].t?' · visé '+fmt(G[gk].t):''}`]});
   const tot=sess.reduce((t,[,x])=>t+x.vol,0);
   $('#view').innerHTML=`<button class="back" data-go="s${id}">‹ ${esc(swName(s))}</button><div class="stack">
   ${G.length>1?`<div><div class="small muted" style="margin-bottom:4px">Séances pour :</div><div class="chips" style="margin:0"><button class="chip-f" data-go="prog-${id}~all" aria-pressed="${all}">Tous mes objectifs</button>${G.map((x,i)=>`<button class="chip-f" data-go="prog-${id}~${i}" aria-pressed="${!all&&i===gi}">🎯 ${i+1}. ${EVL[x.ev]||x.ev}</button>`).join('')}</div></div>`:''}
   <div class="panel"><div class="muted small" style="text-transform:uppercase;letter-spacing:.07em;font-weight:600">Programme personnalisé${all?' · tous mes objectifs (séances réparties)':g&&pr0.saved?` · objectif ${gi+1} : ${EVL[g.ev]}${g.t?' en '+fmt(g.t):''}`:''}</div>
     <h2 style="margin:2px 0 6px">${esc(s.prenom)} · ${all?G.map(x=>EVL[x.ev]).join(' · '):STROKE_NAME[pr.stroke]+' '+DIST_GROUPS.find(d=>d[0]===pr.dist)[1].split(' (')[0].toLowerCase()}</h2>
     <div class="kpis"><div class="kpi"><div class="v">${pr.sess}</div><div class="l">Séances / sem.</div></div><div class="kpi"><div class="v">${(tot/1000).toFixed(1)} km</div><div class="l">Volume semaine</div></div><div class="kpi"><div class="v">${fmt(pa.css)}</div><div class="l">CSS /100</div></div>${ph.weeks!=null?`<div class="kpi"><div class="v">${ph.weeks}</div><div class="l">Semaines avant compét.</div></div>`:''}</div>
-    <div class="hint" style="margin-top:12px"><span><b>${ph.lab}</b>${ph.comp?` vers « ${esc(ph.comp.t)} » (${fdate(ph.comp.d)})`:''}. ${ph.key==='foncier'?'Priorité au volume aérobie, au seuil et à la technique.':ph.key==='spec'?'Priorité aux allures de course de votre épreuve et à la tolérance lactique.':'Volume réduit d’environ 25 %, intensité maintenue : arriver frais.'} Objectif : ${EVL[pr.ev]}.</span></div>
+    <div class="hint" style="margin-top:12px"><span><b>${ph.lab}</b>${ph.comp?` vers « ${esc(ph.comp.t)} » (${fdate(ph.comp.d)})`:''}. ${ph.key==='foncier'?'Priorité au volume aérobie, au seuil et à la technique.':ph.key==='spec'?'Priorité aux allures de course de votre épreuve et à la tolérance lactique.':`Volume réduit de ${ph.weeks!=null&&ph.weeks<=1?50:40} %, intensité maintenue : arriver frais.`} Objectif : ${EVL[pr.ev]}.</span></div>
     <div class="row" style="margin-top:10px"><button class="btn ghost" data-go="prof-${id}">Modifier spécialité, objectif, séances</button></div></div>
   <div class="row noprint" style="justify-content:flex-end">${PBTN('Programme natation de la semaine','data-printall=".psess"')}<span class="small muted">toutes les séances</span></div>
   ${sess.map(([t,x,tag],i)=>sessionHTML(t,x,i,tag||(g&&pr0.saved&&!all?`${EVL[g.ev]}${g.t?' · visé '+fmt(g.t):''}`:''))).join('')}
-  <p class="note">Temps cibles calculés à partir des meilleurs temps de ${esc(s.prenom)} (CSS ${pa.cssSrc})${g&&g.t?`, allures de course calées sur le temps visé de ${fmt(g.t)} au ${EVL[g.ev]}`:''}. Départs arrondis aux 5 s, bassin de 25 m. Le programme se recalcule chaque semaine en fonction de la date de la compétition. À adapter avec l’entraîneur et selon la forme du jour.</p></div>`;
+  <p class="note">Temps cibles calculés à partir des meilleurs temps de ${esc(s.prenom)} (CSS ${pa.cssSrc})${g&&g.t?`, allures de course calées sur le temps visé de ${fmt(g.t)} au ${EVL[g.ev]}`:''}. Récupérations ${restK(ageOf(s))>1?`allongées de ${Math.round((restK(ageOf(s))-1)*100)} % (${ageOf(s)} ans)`:'standard'}, départs arrondis aux 5 s, bassin de 25 m. Les séances changent chaque semaine et le programme suit la date de la compétition. À adapter avec l’entraîneur et selon la forme du jour.</p></div>`;
   wire();
 }
 
