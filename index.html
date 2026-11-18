@@ -2411,7 +2411,7 @@ function go(tok){ hist.push(tok); route(tok); window.scrollTo(0,0); try{history.
 window.addEventListener('popstate',e=>{const t=e.state&&e.state.tok; route(t||'nageurs')});
 document.querySelectorAll('nav.bottom [data-go]').forEach(b=>b.onclick=()=>go(b.dataset.go));
 $('#updDate').textContent=fdate(DATA.maj);
-try{$('#appVer').textContent=/^\d{12}$/.test(BUILD)?'version '+BUILD.slice(6,8)+'/'+BUILD.slice(4,6)+' '+BUILD.slice(8,10)+'h'+BUILD.slice(10,12):''}catch(e){}
+try{if(/^\d{12}$/.test(BUILD)) $('#appVer').textContent='version '+BUILD.slice(6,8)+'/'+BUILD.slice(4,6)+' '+BUILD.slice(8,10)+'h'+BUILD.slice(10,12); else $('#appVer').innerHTML='<a href="https://memed-viry.github.io/carnet-cnv/" target="_blank" rel="noopener" style="color:inherit">copie Claude · ouvrir l’appli</a>'}catch(e){}
 const start=(location.hash||'').slice(1);
 try{history.replaceState({tok:start||(me()?'moi':'nageurs')},'')}catch(e){}
 route(start||(me()?'moi':'nageurs'));
