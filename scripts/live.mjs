@@ -9,7 +9,7 @@ const DATA = getConst(html, 'DATA'), WK = getConst(html, 'WEEKEND');
 let LIVE; try { LIVE = getConst(html, 'LIVE'); } catch (e) { LIVE = { maj: '', comps: [], r: {} }; }
 const d = today();
 const ids = process.env.TEST_COMPS ? process.env.TEST_COMPS.split(',') : (WK.comps || []).filter(c => c.d1 <= d && c.d2 >= d).map(c => c.id);
-if (!ids.length) { console.log('aucune compétition des nageurs suivis aujourd’hui'); process.exit(0); }
+if (!ids.length) { console.log('aucune compétition des nageurs suivis aujourd’hui'); process.exit(3); }
 const RK = {}; DATA.sw.forEach(s => RK[norm(s.nom + s.prenom) + s.annee] = s);
 const clubs = ['VIRY', ...new Set(DATA.sw.filter(s => s.ext && s.club).map(s => s.club))];
 const best = (s, ev, pool) => { const L2 = s.p.filter(p => p[1] === ev && +p[0] === +pool).map(p => p[2]); return L2.length ? Math.min(...L2) : null; };

@@ -1,26 +1,35 @@
 name: Résultats en direct (jours de compétition)
 on:
   schedule:
-    - cron: '*/10 6-20 * * *'
+    - cron: '7 6-20 * * *'
   workflow_dispatch:
+  push:
+    paths: ['.github/workflows/live.yml']
 permissions:
   contents: write
 concurrency:
-  group: donnees
+  group: direct
   cancel-in-progress: false
 jobs:
   maj:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 70
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
         with: { node-version: 24 }
       - run: npm install --no-audit --no-fund
-      - run: node scripts/live.mjs
-      - name: Publier si changement
+      - name: Relevé toutes les 6 minutes pendant 1 heure
         run: |
-          if git diff --quiet; then echo "rien de nouveau"; exit 0; fi
           git config user.name "carnet-bot"; git config user.email "carnet-bot@users.noreply.github.com"
-          git commit -am "Auto live $(TZ=Europe/Paris date '+%Y-%m-%d %H:%M')"
-          for i in 1 2 3; do git pull --rebase -X theirs && git push && exit 0; sleep 5; done; exit 1
+          end=$(( $(date +%s) + 3300 ))
+          while [ $(date +%s) -lt $end ]; do
+            git pull -q --rebase -X theirs || true
+            set +e; node scripts/live.mjs; rc=$?; set -e
+            if [ $rc -eq 3 ]; then echo "pas de compétition aujourd'hui"; exit 0; fi
+            if ! git diff --quiet; then
+              git commit -qam "Auto live $(TZ=Europe/Paris date '+%Y-%m-%d %H:%M')"
+              for i in 1 2 3; do git pull -q --rebase -X theirs && git push -q && break; sleep 5; done
+            fi
+            sleep 360
+          done
