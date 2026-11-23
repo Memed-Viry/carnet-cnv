@@ -3,6 +3,8 @@ on:
   schedule:
     - cron: '53 5 * * 1,4'
   workflow_dispatch:
+  push:
+    paths: ['.github/workflows/calendar.yml']
 permissions:
   contents: write
 concurrency:
