@@ -58,9 +58,15 @@ for (const a of ag) {
   if (a.d < t0) continue;
   const near = e => e.d && Math.abs(new Date(e.d) - new Date(a.d)) <= 3 * 864e5;
   const words = t => N(t).split(' ').filter(w => w.length > 3 && !/^(championnats?|maitres?|open|meeting|des|les)$/.test(w));
-  const ex = CAL.find(e => (e.d === a.d && sameEv(e, a.d, a.l)) || (near(e) && (cityKey(e.l) === cityKey(a.l) || words(e.t).filter(w => words(a.t).includes(w)).length >= 2 || (e.k === 'nat' && /france/i.test(a.t) && ((/n1/.test(N(e.t)) && /n1/.test(N(a.t))) || (/n2/.test(N(e.t)) && /n2/.test(N(a.t))) || (/relais/.test(N(e.t)) && /relais/.test(N(a.t))))))));
+  // championnats de France : même niveau (N1/N2/relais/interclubs) et même saison (hiver/été) à ±3 semaines = même compétition
+  const lvl = t => { t = N(t); return /relais/.test(t) ? 'relais' : /interclub/.test(t) ? 'ic' : /\bn1\b|open n1|n1 open/.test(t) ? 'n1' : /\bn2\b/.test(t) ? 'n2' : ''; };
+  const sais = t => { t = N(t); return /hiver/.test(t) ? 'h' : /\bete\b/.test(t) ? 'e' : ''; };
+  const sameNat = e => e.k === 'nat' && /france/i.test(a.t) && e.d && Math.abs(new Date(e.d) - new Date(a.d)) <= 21 * 864e5 && lvl(e.t) && lvl(e.t) === lvl(a.t) && (!sais(e.t) || !sais(a.t) || sais(e.t) === sais(a.t));
+  const ex = CAL.find(e => (e.d === a.d && sameEv(e, a.d, a.l)) || sameNat(e) || (near(e) && (cityKey(e.l) === cityKey(a.l) || words(e.t).filter(w => words(a.t).includes(w)).length >= 2)));
   const undef = x => /a definir|a paraitre|date et lieu/.test(N(x));
-  if (ex) { if (undef(ex.l) && a.l && !undef(a.l)) { log.push(`lieu précisé : ${ex.t} → ${a.l} (${a.src})`); ex.l = a.l; } continue; }
+  if (ex) { if (undef(ex.l) && a.l && !undef(a.l)) { log.push(`lieu précisé : ${ex.t} → ${a.l} (${a.src})`); ex.l = a.l; }
+    if (ex.d !== a.d && sameNat(ex) && !(ex.n || '').includes(a.src)) { ex.n = `${ex.n || ''} ${a.src} annonce ${a.d.slice(8)}/${a.d.slice(5, 7)}${a.d2 ? '–' + a.d2.slice(8) + '/' + a.d2.slice(5, 7) : ''} : date à confirmer.`.trim(); log.push(`date différente : ${ex.t} (${a.src} ${a.d})`); }
+    continue; }
   const k = /france/i.test(a.t) ? 'nat' : /monde|world|europe|international/i.test(a.t) ? 'int' : meets.some(m => m.d === a.d && cityKey(m.l) === cityKey(a.l)) ? 'meet' : 'idf';
   CAL.push({ d: a.d, ...(a.d2 ? { d2: a.d2 } : {}), k, t: a.t, l: a.l, b: null, n: `Source : ${a.src}.` }); log.push(`ajouté : ${a.t} · ${a.d} · ${a.l} (${a.src})`);
 }
